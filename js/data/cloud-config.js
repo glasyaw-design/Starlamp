@@ -6,5 +6,7 @@
      예: 'https://내프로젝트.vercel.app/api/account'
    자세한 방법은 docs/cloud-setup.md를 보세요. 비밀 키는 여기에 넣지 않아요(넣을 것도 없어요). */
 const CLOUD_CONFIG = {
-  api: '/api/account'
+  api: '/api/account',
+  // 동시 접속자 세기(관리자만 숫자를 봄). 비워 두면 신호를 보내지 않아요. Vercel 버전은 '/api/presence'.
+  presence: '/api/presence'
 };

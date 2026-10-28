@@ -53,6 +53,8 @@ const MAT_ELEM = {
 };
 // 이름부터 속성이 분명한데 조합식에 속성 재료가 없는 장비는 여기서 정해 준다.
 const ITEM_ELEM = {
+  storm_staff: 'bolt', // 천둥군주의 지팡이: 번개 결정 ×3 + 혼돈의 파편 — 이름대로 번개(예전엔 더 귀한 혼돈 때문에 암흑)
+  aegis: 'holy', // 신성 방패 이지스: 이름대로 신성(예전엔 불사조 깃털 때문에 화염)
   fire_book: 'fire',
   ice_book: 'ice',
   thunder_hammer: 'bolt',

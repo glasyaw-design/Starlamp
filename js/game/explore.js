@@ -10,7 +10,21 @@ function dropList(r) {
       const t = sh >= 0.3 ? ['자주', 'often'] : sh >= 0.12 ? ['가끔', 'some'] : ['드물게', 'rare'];
       return `<div class="dl">${S.seen[k] ? tile(k) : '<span class="tile unk">?</span>'}<span${S.seen[k] ? '' : ' class="muted"'}>${S.seen[k] ? MATS[k].n : '???'}</span><em class="${t[1]}">${t[0]}</em></div>`;
     })
-    .join('')}</div>`;
+    .join('')}${regionBonus(r) ? `<div class="dl bonus"><span class="tile unk">+</span><span>흔한 재료 꾸러미</span><em class="often">덤 ${regionBonus(r)}개</em></div>` : ''}</div>`;
+}
+// 높은 던전에 가는 이유: 깊은 곳일수록 '흔한 재료 꾸러미'를 덤으로 챙겨 온다(창고에 적은 흔한 재료부터).
+// 그래서 낮은 재료가 모자라도 낮은 던전만 돌 필요가 없다.
+const COMMON_MATS = Object.keys(MATS).filter(k => MATS[k].r === 1);
+const regionBonus = r => Math.min(5, Math.floor(REGIONS.indexOf(r) / 3) + (r.ap - 1));
+function commonBundle(r) {
+  const n = regionBonus(r);
+  const got = {};
+  for (let i = 0; i < n; i++) {
+    const low = [...COMMON_MATS].sort((a, b) => (S.mats[a] || 0) + (got[a] || 0) - ((S.mats[b] || 0) + (got[b] || 0))).slice(0, 3);
+    const k = pick(low);
+    got[k] = (got[k] || 0) + 1;
+  }
+  return got;
 }
 function rareDrop(r) {
   const ds = [...r.drops].sort((a, b) => MATS[b[0]].r - MATS[a[0]].r || a[1] - b[1]);
@@ -288,6 +302,9 @@ function exFinish() {
     found[k] = (found[k] || 0) + 1;
   }
   if (x.cr >= 50) found.shadow = (found.shadow || 0) + 1;
+  // 깊은 던전의 덤: 흔한 재료 꾸러미(창고에 적은 것부터)
+  const bundle = n > 0 ? commonBundle(r) : {};
+  for (const [k, c] of Object.entries(bundle)) found[k] = (found[k] || 0) + c;
   for (const [k, c] of Object.entries(x.extra)) found[k] = (found[k] || 0) + c;
   for (const [k, c] of Object.entries(found)) addMat(k, c);
   if (x.gold) {

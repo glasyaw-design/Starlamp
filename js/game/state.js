@@ -47,16 +47,41 @@ const tierOk = t => t === 1 || PERKS.filter(p => p.t === t - 1 && S.perks[p.id])
 const has = p => !!(S && S.perks && S.perks[p]);
 const heroTitle = lv => TITLES.find(t => lv >= t[0])[1];
 const def = k => MATS[k] || ITEMS[k];
-const itemPow = it => Math.round(ITEMS[it.key].p * (1 + 0.18 * it.lvl) * (it.cur ? 1.4 : 1) * qPow(it));
+// 강화 등급 상승(드묾): +5 이상으로 강화에 성공할 때마다 낮은 확률로 희귀도가 한 단계 오른다(전설까지, 한 장비 최대 2단계).
+// 한 번 오른 등급은 강화가 떨어져도 남는다.
+const TIER_P = { 5: 0.04, 6: 0.05, 7: 0.06, 8: 0.08, 9: 0.1, 10: 0.12 }; // 성공해서 도달한 단계별 확률
+const TIER_MAX = 2;
+const TIER_POW = 0.15; // 오른 등급 하나당 전투력 +15%
+const TIER_VAL = 1.3; // 오른 등급 하나당 값 ×1.3
+const itemUp = it => (it && it.up) || 0;
+const itemR = it => Math.min(4, ITEMS[it.key].r + itemUp(it));
+const itemPow = it => Math.round(ITEMS[it.key].p * (1 + 0.18 * it.lvl) * (it.cur ? 1.4 : 1) * qPow(it) * (1 + TIER_POW * itemUp(it)));
 const baseVal = k => Math.round(ITEMS[k].p * VMUL[ITEMS[k].r]);
 const enhVal = l => ENH_VAL[Math.max(0, Math.min(ENH_VAL.length - 1, l || 0))];
-const itemVal = it => Math.round(baseVal(it.key) * enhVal(it.lvl) * (it.cur ? 0.8 : 1) * enchantValMul(it) * qVal(it));
+const itemVal = it => Math.round(baseVal(it.key) * enhVal(it.lvl) * (it.cur ? 0.8 : 1) * enchantValMul(it) * qVal(it) * Math.pow(TIER_VAL, itemUp(it)));
 const iname = it => (it.cur ? '저주받은 ' : '') + (it.named ? `「${it.named}」 ` : QUAL[qOf(it)].pre) + ITEMS[it.key].n + (it.lvl ? ` +${it.lvl}` : '');
 const recipePrice = k => (ITEMS[k].r >= 4 ? ITEMS[k].p * 8 : ITEMS[k].p * 4);
 let S;
 // 저장·불러오기는 game/save-manager.js 에서 처리한다.
 function mk(key, lvl = 0) {
   return { id: S.uid++, key, lvl };
+}
+const tierCap = it => Math.min(TIER_MAX, 4 - ITEMS[it.key].r);
+// 지금 강화에 성공하면 등급이 오를 확률(0이면 불가)
+function tierChance(it, lvlAfter) {
+  if (itemUp(it) >= tierCap(it)) return 0;
+  const p = TIER_P[Math.min(10, lvlAfter)] || 0;
+  return p ? Math.min(0.3, p + (qOf(it) === 2 ? 0.02 : 0) + myStat('luk') * STAT_FX.luk.tier) : 0;
+}
+// 강화 성공 뒤 등급 상승 굴림. 올랐으면 true.
+function tierRoll(it) {
+  const p = tierChance(it, it.lvl);
+  if (!p || Math.random() >= p) return false;
+  it.up = itemUp(it) + 1;
+  log(`✦ 등급 상승! ${j(iname(it), '이/가')} ${RN[itemR(it)]} 등급이 됐어요.`, 'gold');
+  if (typeof toast === 'function') toast('✦ 등급 상승!', `${iname(it)} · ${RN[itemR(it)]}`);
+  if (typeof sfx === 'function') sfx('fanfare');
+  return true;
 }
 function log(msg, cls = '') {
   S.log.unshift({ d: S.day, m: msg, c: cls });
@@ -131,7 +156,7 @@ function seen(k) {
     log(`도감 ${S.milestone * 10}종 달성! 수집가 협회에서 ${fmt(g)}G와 명성 +4를 보내왔어요.`, 'gold');
   }
 }
-const maxAp = () => 3 + S.up.cart + Math.floor(myStat('vit') / STAT_FX.vit.apEvery) + ((S.legacy || []).includes('ap') && S.day <= 3 ? 1 : 0);
+const maxAp = () => 3 + S.up.cart + Math.min(1, Math.floor(myStat('vit') / STAT_FX.vit.apEvery)) + ((S.legacy || []).includes('ap') && S.day <= 3 ? 1 : 0);
 const D = () => DIFF[(S && S.diff) || 'normal'];
 const rentCost = () => {
   const r = D().rent;
@@ -144,6 +169,7 @@ function salePrice(h, it, m) {
   if (buffToday('price')) p *= 1.2;
   p *= 1 + 0.05 * Math.min(S.combo || 0, 10);
   if (h && h.golden) p *= 1.5;
+  p *= 1 + myStat('eye') * STAT_FX.eye.price; // 안목: 시세를 알아 더 받음
   if (h && h.collector && matchMul(h, it.key) >= 1.5) p *= THRILL.collector.matchMul;
   if (S.sets && S.sets[ITEMS[it.key].sub]) p *= 1 + THRILL.setBonus;
   return Math.round(p);
@@ -151,6 +177,7 @@ function salePrice(h, it, m) {
 const priceMul = () => (S.event === 'sale' ? 0.8 : 1) * D().cost;
 const consignSlots = () => 2 + S.up.appraise;
 function newGame(diff) {
+  if (typeof presenceBeat === 'function') presenceBeat('start'); // 새 게임 수 세기(관리자 통계)
   const g = pick(GOALS);
   S = {
     diff: diff || 'normal',

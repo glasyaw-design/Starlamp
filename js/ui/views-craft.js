@@ -33,22 +33,23 @@ function enchantHTML(it) {
 
 /* ---------- 조합식 단서 ---------- */
 function cluesHTML() {
-  const ks = Object.keys(S.clues || {}).filter(k => ITEMS[k] && !recipeVisible(k) && S.clues[k] > 0);
+  const ks = Object.keys(S.clues || {}).filter(k => ITEMS[k] && !S.known[k] && S.clues[k] > 0);
   if (!ks.length) return '';
   const cards = ks
     .map(clueInfo)
-    .sort((a, b) => b.lv - a.lv || ITEMS[a.k].r - ITEMS[b.k].r)
+    .sort((a, b) => b.lv - a.lv || b.found - a.found || ITEMS[a.k].r - ITEMS[b.k].r)
     .slice(0, 8)
     .map(
-      c => `<article class="clue"><div class="spread"><b class="rn${ITEMS[c.k].r}">??? · ${c.title}</b><span class="pips">${[1, 2, 3].map(i => `<i class="${i <= c.lv ? 'on' : ''}"></i>`).join('')}</span></div>
+      c => `<article class="clue"><div class="spread"><b class="rn${ITEMS[c.k].r}">??? · ${c.title}</b><span class="pips" title="단서 ${c.lv}/3 · 3단계면 조합식을 깨우쳐요">${[1, 2, 3].map(i => `<i class="${i <= c.lv ? 'on' : ''}"></i>`).join('')}</span></div>
       <div class="kv"><span class="muted">필요한 재료 등급</span><b>${c.grades}</b></div>
-      ${c.kinds ? `<div class="kv"><span class="muted">재료 유형</span><b>${c.kinds.join(' · ')}</b></div>` : '<div class="kv muted"><span>재료 유형</span><b>단서 2단계에서</b></div>'}
-      ${c.where ? `<div class="kv"><span class="muted">예상 속성</span><b>${c.el ? elTag(c.el) || ELEMENTS[c.el].n : '없음'}</b></div><div class="kv"><span class="muted">재료가 나는 곳</span><b>${c.where.length ? c.where.join(', ') : '경매·암시장'}</b></div>` : '<div class="kv muted"><span>속성 · 발견 지역</span><b>단서 3단계에서</b></div>'}
-      <small class="muted">출처: ${CLUE_SRC[(S.clueLog || {})[c.k]] || '단서'} · 못 본 재료 ${c.unseen}종을 찾으면 조합식이 드러나요.</small></article>`
+      ${c.kinds ? `<div class="kv"><span class="muted">재료${c.found ? ` · 찾은 것 ${c.found}/${c.of}` : ''}</span><b>${c.kinds.join(' · ')}</b></div>` : '<div class="kv muted"><span>재료 유형 · 하나의 이름</span><b>단서 2단계에서</b></div>'}
+      ${c.where ? `<div class="kv"><span class="muted">예상 속성</span><b>${c.el ? elTag(c.el) || ELEMENTS[c.el].n : '없음'}</b></div>${c.where.length ? `<div class="kv"><span class="muted">재료가 나는 곳</span><b>${c.where.join(', ')}</b></div>` : ''}` : ''}
+      <div class="row"><button class="btn small primary" data-act="expGo" data-v="${c.k}" ${expOpen() ? '' : 'disabled'}>⚗ 실험대에서 풀기</button><small class="muted">${expOpen() ? '재료를 섞어 보면 바로 알 수 있어요' : `실험대는 ${EXP_START}일째부터`}</small></div>
+      <small class="muted">출처: ${CLUE_SRC[(S.clueLog || {})[c.k]] || '단서'} · 단서 3단계가 되면 조합식을 깨우쳐요.</small></article>`
     )
     .join('');
-  return `<section class="sec"><div class="spread"><h2>조합식 단서</h2><span class="muted num">${ks.length}개</span></div>
-   <p class="lead">탐색 메모, 새 재료, 연구, 특별한 제작에서 단서가 쌓여요. 단서를 보고 어디서 무엇을 찾을지 짐작해 보세요.</p><div class="clues">${cards}</div></section>`;
+  return `<section class="sec"><div class="spread"><h2>조합식 단서</h2><span class="muted num">${ks.length}개${S.clueDone ? ` · 단서로 깨우침 ${S.clueDone}` : ''}</span></div>
+   <p class="lead">탐색 메모, 새 재료, 연구, 특별한 제작, 단골 이야기에서 단서가 쌓여요. <b>3단계가 되면 조합식을 바로 깨우치고</b>, 그 전이라도 실험대에서 재료를 섞어 풀 수 있어요.</p><div class="clues">${cards}</div></section>`;
 }
 
 /* ---------- 장비 이력 ---------- */

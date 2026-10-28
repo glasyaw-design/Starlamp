@@ -293,7 +293,7 @@ function buildBrief(ctx) {
     const al = typeof setsAlmost === 'function' ? setsAlmost() : [];
     if (al.length) add(30, 'good', `${SUB[al[0].s][1]} 세트까지 1개!`, '도감에서 빠진 하나를 확인해 보세요. 완성하면 판매가가 영원히 올라요.', 'codex');
   }
-  if (S.day === RIVAL.start - 1 && !(S.rival && S.rival.on))
+  if (S.day === rivalStart() - 1 && !(S.rival && S.rival.on))
     add(90, 'warn', '길 건너 빈 가게에 까마귀 깃발이…', '누군가 내일 새 상점을 연대요. 검은 깃털이 문 앞에 잔뜩 떨어져 있어요.', null);
   if (ctx.rival && ctx.rival.open)
     add(99, 'danger', '라이벌 등장 · 까마귀 상회 개업!', `길 건너에 경쟁 상점이 생겼어요. ${RIVAL.week}일마다 판매 수로 대결하고, 못 판 손님은 밤에 까마귀 상회로 가요. 🐦 표시 손님을 먼저 잡으세요!`, 'shop');

@@ -28,40 +28,56 @@ const GLOSS = {
 const easyOn = () => !!(S && S.opt && S.opt.easy);
 
 /* ---------- 1 다음 할 일 ---------- */
-// 이 손님에게 지금 가장 팔 만한 진열품
+// 손님이 찾는 것과 얼마나 맞는지: 2 딱 찾던 것 · 1 같은 종류(다른 세부) · 0 다른 종류
+// (직업이 좋아하는 종류 보너스로 '살 확률'이 높아도, 찾는 것과 다른 물건을 먼저 추천하지 않게 한다)
+function wantTier(h, k) {
+  const d = ITEMS[k];
+  if (!d || d.t !== h.want) return 0;
+  return h.wantSub && d.sub !== h.wantSub ? 1 : 2;
+}
+const REC_MIN_P = 0.35; // 찾는 물건이라도 이보다 안 살 것 같으면 다른 후보와 같은 줄에서 비교
+const recRank = b => (b.p >= REC_MIN_P ? b.tier : -1);
+// 이 손님에게 지금 가장 팔 만한 진열품(찾는 것과 맞는 순서 → 팔릴 만한 순서)
 function bestFor(h) {
   let best = null;
   for (const it of S.items) {
+    if (pickyNope(h, it)) continue;
     const bc = buyChance(h, it, 1);
     if (bc.price > budgetFor(h, it)) continue;
-    const sc = bc.p * (matchMul(h, it.key) >= 1.5 ? 2 : 1) * (1 + bc.price / 1000);
-    if (!best || sc > best.sc) best = { it, p: bc.p, price: bc.price, sc, match: matchMul(h, it.key) >= 1.5 };
+    const tier = wantTier(h, it.key);
+    const sc = bc.p * (1 + bc.price / 1000);
+    const cand = { it, p: bc.p, price: bc.price, sc, tier, match: tier === 2 };
+    if (!best || recRank(cand) > recRank(best) || (recRank(cand) === recRank(best) && sc > best.sc)) best = cand;
   }
   return best;
 }
+// 찾는 물건(없으면 같은 종류)을 지금 만들 수 있으면 그중 가장 값진 것
 function craftFor(h) {
-  return CRAFTABLE.filter(k => S.known[k] && recipeVisible(k) && canCraft(k) && matchMul(h, k) >= 1.5 && listPrice(k, h) <= h.budget).sort(
-    (a, b) => ITEMS[b].p - ITEMS[a].p
+  return CRAFTABLE.filter(k => S.known[k] && recipeVisible(k) && canCraft(k) && wantTier(h, k) >= 1 && listPrice(k, h) <= h.budget).sort(
+    (a, b) => wantTier(h, b) - wantTier(h, a) || ITEMS[b].p - ITEMS[a].p
   )[0];
 }
+const tierWord = (h, b) => (b.tier === 2 ? '찾던 물건이에요' : b.tier === 1 ? `같은 종류예요 (찾는 것: ${wantText(h)})` : `다른 종류예요 (찾는 것: ${wantText(h)})`);
 function nextAdvice() {
   if (!S || S.over) return null;
   const guests = S.heroes.filter(h => !h.bought && !h.left);
-  // ① 잘 팔릴 물건이 있으면 팔기
-  let top = null;
+  // ① 찾는 물건(또는 같은 종류)이 진열대에 있고 잘 팔릴 것 같으면 팔기
+  let top = null,
+    alt = null;
   for (const h of guests) {
     const b = bestFor(h);
-    if (b && (!top || b.sc > top.b.sc)) top = { h, b };
+    if (!b) continue;
+    if (!alt || b.sc > alt.b.sc) alt = { h, b };
+    if (b.tier >= 1 && b.p >= 0.55 && (!top || b.tier > top.b.tier || (b.tier === top.b.tier && b.sc > top.b.sc))) top = { h, b };
   }
-  if (top && top.b.p >= 0.55)
-    return { ic: '🛒', t: `${top.h.name}에게 ${iname(top.b.it)} 팔기`, d: `${faceFor(top.b.p)[1]} 살 것 같아요 · 약 ${fmt(top.b.price)}G`, act: 'openSell', v: top.h.id, btn: '팔러 가기' };
+  if (top) return { ic: '🛒', t: `${top.h.name}에게 ${iname(top.b.it)} 팔기`, d: `${faceFor(top.b.p)[1]} ${tierWord(top.h, top.b)} · 약 ${fmt(top.b.price)}G`, act: 'openSell', v: top.h.id, btn: '팔러 가기' };
   // ② 손님이 찾는 걸 만들 수 있으면 만들기
   for (const h of guests) {
     const k = craftFor(h);
-    if (k) return { ic: '🔨', t: `${ITEMS[k].n} 만들기`, d: `${h.name}이(가) 찾는 물건이에요. 만들면 바로 팔 수 있어요.`.replace(/(\S+)이\(가\)/, (m, w) => j(w, '이/가')), act: 'quickCraft', v: `${k}|${h.id}`, btn: '바로 만들기' };
+    if (k) return { ic: '🔨', t: `${ITEMS[k].n} 만들기`, d: `${h.name}이(가) 찾는 ${wantTier(h, k) === 2 ? '물건' : '종류'}예요. 만들면 바로 팔 수 있어요.`.replace(/(\S+)이\(가\)/, (m, w) => j(w, '이/가')), act: 'quickCraft', v: `${k}|${h.id}`, btn: '바로 만들기' };
   }
-  // ③ 조금이라도 팔 수 있으면
-  if (top) return { ic: '🛒', t: `${top.h.name}에게 ${iname(top.b.it)} 내놓아 보기`, d: `${faceFor(top.b.p)[1]} 찾던 물건은 아니지만 살 수도 있어요.`, act: 'openSell', v: top.h.id, btn: '팔러 가기' };
+  // ③ 찾던 건 아니어도 팔 수 있으면
+  if (alt) return { ic: '🛒', t: `${alt.h.name}에게 ${iname(alt.b.it)} 내놓아 보기`, d: `${faceFor(alt.b.p)[1]} ${alt.b.tier ? tierWord(alt.h, alt.b) : `찾던 건 아니지만 살 수도 있어요 (찾는 것: ${wantText(alt.h)})`}`, act: 'openSell', v: alt.h.id, btn: '팔러 가기' };
   // ④ 아무거나 만들 수 있으면
   const any = CRAFTABLE.find(k => S.known[k] && recipeVisible(k) && canCraft(k));
   if (guests.length && any) return { ic: '🔨', t: '공방에서 장비 만들기', d: '진열대에 손님이 찾는 물건이 없어요. 하나 만들어 봐요.', act: 'tab', v: 'workshop', btn: '공방으로' };
@@ -86,9 +102,12 @@ function nextBarHTML() {
 function recLineHTML(h) {
   if (h.bought || h.left) return '';
   const b = bestFor(h);
-  if (b) return `<div class="rec${b.match ? ' good' : ''}"><span>👉 추천</span><b>${iname(b.it)}</b><em>${faceFor(b.p)[1]} ${fmt(b.price)}G</em></div>`;
+  // 딱 찾던 것 · 같은 종류는 그대로 추천
+  if (b && b.tier >= 1) return `<div class="rec${b.tier === 2 ? ' good' : ''}"><span>👉 ${b.tier === 2 ? '추천' : '비슷한 것'}</span><b>${iname(b.it)}</b><em>${faceFor(b.p)[1]} ${fmt(b.price)}G</em></div>`;
+  // 진열대에 찾는 종류가 없으면: 만들 수 있으면 만들기를 먼저, 아니면 '대신'으로 분명히
   const k = craftFor(h);
-  if (k) return `<div class="rec"><span>👉 없음</span><b>${ITEMS[k].n}</b><button class="linkbtn" data-act="quickCraft" data-v="${k}|${h.id}">만들 수 있어요</button></div>`;
+  if (k) return `<div class="rec"><span>👉 진열대에 없음</span><b>${ITEMS[k].n}</b><button class="linkbtn" data-act="quickCraft" data-v="${k}|${h.id}">만들 수 있어요</button></div>`;
+  if (b) return `<div class="rec off"><span>👉 대신</span><b>${iname(b.it)}</b><em>찾던 건 아니에요 · ${faceFor(b.p)[1]}</em></div>`;
   return '<div class="rec none"><span>👉</span><b>맞는 물건이 없어요</b><em>공방·탐색에서 준비</em></div>';
 }
 

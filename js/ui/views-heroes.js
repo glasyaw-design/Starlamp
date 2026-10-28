@@ -40,7 +40,7 @@ function openQuest(hid) {
       const price = questPrice(k, it, h);
       const gain = it ? price - (typeof it.cost === 'number' ? it.cost : itemVal(it) * 0.6) : 0;
       return `<div class="qchoice${ok ? '' : ' off'}"><div style="min-width:0"><b>${C.n}</b><span class="muted">${C.d}</span>
-       ${it ? `<div class="qitem">${tile(it.key, it.lvl)}<span class="rn${ITEMS[it.key].r}">${iname(it)}</span>${elTag(itemElem(it), 1)} · 받는 돈 <b>${fmt(price)}G</b>${typeof it.cost === 'number' ? ` · 원가 대비 ${signG(Math.round(gain))}` : ''}</div>` : k === 'refuse' ? '' : '<div class="qitem muted">조건에 맞는 장비가 진열대에 없어요.</div>'}
+       ${it ? `<div class="qitem">${tile(it.key, it.lvl)}<span class="rn${itemR(it)}">${iname(it)}</span>${elTag(itemElem(it), 1)} · 받는 돈 <b>${fmt(price)}G</b>${typeof it.cost === 'number' ? ` · 원가 대비 ${signG(Math.round(gain))}` : ''}</div>` : k === 'refuse' ? '' : '<div class="qitem muted">조건에 맞는 장비가 진열대에 없어요.</div>'}
        <div class="qfx"><span>친밀도 ${C.aff > 0 ? '+' : ''}${C.aff}</span><span>신뢰 ${C.trust > 0 ? '+' : ''}${C.trust}</span><span>성과 ×${C.pow}</span></div></div>
        <button class="btn small${ok && k !== 'refuse' ? ' primary' : ''}" data-act="questChoose" data-v="${h.id}|${k}" ${ok ? '' : 'disabled'}>고르기</button></div>`;
     })

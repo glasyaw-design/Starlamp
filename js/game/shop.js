@@ -16,13 +16,20 @@ function matchMul(h, k) {
 function trySell(hid, iid, m) {
   const h = S.heroes.find(x => x.id == hid),
     it = S.items.find(x => x.id == iid);
-  if (!h || !it || h.bought || h.left) return;
+  if (!h || !it || h.bought || h.left || pickyNope(h, it)) return;
   const price = salePrice(h, it, m);
   if (price > budgetFor(h, it)) return;
   const mul = matchMul(h, it.key);
   const ch = buyChance(h, it, m).p;
   h.haggled = 1;
   if (Math.random() < ch) {
+    // 사기로 마음먹었어도 까다로운 손님은 트집을 잡는다(난이도별) — 거절이 아니라서 기분·연속 만족은 그대로
+    if (pickyRoll(h, it, m, price)) {
+      sfx('fail');
+      openSell(hid);
+      commit();
+      return;
+    }
     completeSale(h, it, price, m, mul);
     closeModal();
   } else {
@@ -146,7 +153,7 @@ function enhInfo(it) {
   const need = {};
   if (it.lvl >= 3) need.mana = 1;
   if (it.lvl >= 6) need.star = 1;
-  const rate = Math.min(99, ENH_RATE[Math.min(it.lvl, 9)] + myStat('dex') * STAT_FX.dex.enh + 5 * S.up.forge + (S.useBless && S.bag.bless > 0 ? 15 : 0) + (buffToday('enh') ? 15 : 0));
+  const rate = Math.max(5, Math.min(99, ENH_RATE[Math.min(it.lvl, 9)] + myStat('dex') * STAT_FX.dex.enh + 5 * S.up.forge + (S.useBless && S.bag.bless > 0 ? 15 : 0) + (buffToday('enh') ? 15 : 0) + (D().enh || 0))); // 난이도별 강화 확률(악몽 −16%p), 최소 5%
   return {
     rate,
     cost: Math.round(baseVal(it.key) * ENH_COST_K * enhVal(it.lvl) * (S.staff.smith ? 0.75 : 1)),
@@ -161,7 +168,8 @@ function itemSpend(it, gold, mats) {
   it.paid = Math.round((it.paid || 0) + gold + mats.reduce((a, [m, n]) => a + ((S.matAvg && S.matAvg[m]) || 0) * n, 0));
 }
 let lastForge = null;
-let ENH_LAST = null; // 마지막 강화 결과(화면이 lastForge를 지워도 남는다)
+let ENH_LAST = null;
+let lastTier = null; // 방금 오른 등급(강화 화면에 한 번 보여 줌) // 마지막 강화 결과(화면이 lastForge를 지워도 남는다)
 function enhance() {
   const it = S.items.find(x => x.id === S.sel);
   if (!it) return;
@@ -182,11 +190,12 @@ function enhance() {
     if (it.lvl >= 5) qsAdd('enh5');
     meXp(3 + it.lvl * 2);
     log(`${great ? '강화 대성공!! 두 단계나 올라' : '강화 성공!'} ${j(iname(it), '이/가')} 됐어요.`, 'good');
+    if (tierRoll(it)) lastTier = itemR(it);
     lastForge = great ? 'great' : 'success';
     sfx(great ? 'fanfare' : 'success');
     if (great) toast('강화 대성공!', iname(it));
     fx('enhOk', { lvl: it.lvl });
-  } else if (it.lvl >= 4 && Math.random() < (has('smithing') ? 0.2 : 0.4)) {
+  } else if (it.lvl >= 4 && Math.random() < Math.min(0.9, (has('smithing') ? 0.2 : 0.4) * (D().enhDrop || 1))) {
     if (S.useProt && S.bag.protect > 0) {
       S.bag.protect--;
       if (!S.bag.protect) S.useProt = false;
@@ -222,6 +231,7 @@ function fuse() {
   it.cost = Math.round(it.cost + oc);
   it.paid = Math.round((it.paid || 0) + (o.paid || 0));
   it.lvl = Math.min(10, Math.max(it.lvl, o.lvl) + 1);
+  it.up = Math.max(itemUp(it), itemUp(o)); // 재료로 쓴 물건의 오른 등급도 이어받는다(융합 자체로는 오르지 않음)
   log(`융합 성공! ${j(iname(it), '이/가')} 됐어요.`, 'good');
   lastForge = 'fuse';
   sfx('success');
@@ -281,15 +291,20 @@ function consign(iid) {
   closeModal();
   commit();
 }
-function buy(i) {
+// 좌판에서 사기. n개(또는 'max' = 살 수 있는 만큼)를 한 번에 산다. 산 개수를 돌려준다.
+function buy(i, n = 1) {
   const w = S.stall[i];
-  if (!w) return;
+  if (!w) return 0;
   const p = stallPrice(w);
-  if (w.stock <= 0 || S.gold < p) return;
-  pay('mats', p);
-  w.stock--;
-  addMat(w.key, 1, p);
+  const can = Math.min(w.stock, Math.floor(S.gold / Math.max(1, p)));
+  const k = Math.max(0, Math.min(can, n === 'max' ? can : Math.round(+n) || 1));
+  if (!k) return 0;
+  pay('mats', p * k);
+  w.stock -= k;
+  addMat(w.key, k, p * k);
+  if (k > 1) log(`좌판에서 ${MATS[w.key].n} ${k}개를 샀어요. (−${fmt(p * k)}G)`);
   commit();
+  return k;
 }
 function upgrade(id) {
   const u = UPGRADES.find(x => x.id === id);
@@ -440,7 +455,7 @@ function openBox(bid) {
       .map(([k, c]) => `<div>${tile(k)}<span>${MATS[k].n} ×${c}</span></div>`)
       .join(
         ''
-      )}${it ? `<div>${tile(it.key, it.lvl)}<span class="rn${ITEMS[it.key].r}">${iname(it)}</span></div>` : ''}</div>${it && ITEMS[it.key].relic ? '<p>상자 바닥에서 유물이 반짝여요!</p>' : ''}`,
+      )}${it ? `<div>${tile(it.key, it.lvl)}<span class="rn${itemR(it)}">${iname(it)}</span></div>` : ''}</div>${it && ITEMS[it.key].relic ? '<p>상자 바닥에서 유물이 반짝여요!</p>' : ''}`,
     [{ label: '챙기기', act: 'close', primary: 1 }]
   );
 }

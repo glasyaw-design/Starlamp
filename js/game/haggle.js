@@ -21,6 +21,41 @@ function helloLine(h) {
   return P.hello[h.id % P.hello.length];
 }
 
+/* ---------- 까다로운 손님(난이도별 트집) ---------- */
+// 이 손님이 이 물건에 트집을 잡을 확률과 이유들
+function pickyOf(h, it, m) {
+  if (!h || !it || h.opening || h.rift || (S.coach != null && S.coach !== 'done')) return { p: 0, why: [] };
+  if (window.STARLAMP_TEST && !window.PICKY_TEST) return { p: 0, why: [] }; // 회귀 테스트는 기존 판매 규칙 그대로(트집 테스트·시뮬레이션만 켬)
+  const P = PICKY[S.diff] || PICKY.normal;
+  const d = ITEMS[it.key];
+  const why = [];
+  if (d.t !== h.want) why.push('off');
+  else if (h.wantSub && d.sub !== h.wantSub) why.push('sub');
+  if (typeof gearSense === 'function' && gearSense(h, it) < 0) why.push('weak');
+  if (m > 1) why.push('up');
+  const p = Math.max(0, (P.base + why.reduce((a, k) => a + P[k], 0)) * (h.regular ? 0.7 : 1) - myStat('cha') * STAT_FX.cha.picky);
+  return { p: Math.min(0.6, p), why };
+}
+// 트집 반응: 'cut' 값을 깎자 · 'nope' 이 물건은 안 삼 · null 그냥 삼
+function pickyRoll(h, it, m, price) {
+  const pk = pickyOf(h, it, m);
+  if (!pk.p || Math.random() >= pk.p) return null;
+  const P = PICKY[S.diff] || PICKY.normal;
+  const k = pk.why.length ? pick(pk.why) : 'base';
+  const why = pick(PICKY_WHY[k]);
+  if (m > COUNTER.min && Math.random() < P.cutP) {
+    const cutPrice = Math.max(1, Math.round(price * (1 - P.cut)));
+    h.counter = { iid: it.id, price: cutPrice, m, why };
+    log(`${h.name}: "${why} ${fmt(cutPrice)}G로 깎아 주면 살게요."`, 'bad');
+    return 'cut';
+  }
+  h.nope = { ...(h.nope || {}), [it.id]: 1 };
+  h.counter = null;
+  log(`${h.name}: "${why} 이건 안 살래요."`, 'bad');
+  return 'nope';
+}
+const pickyNope = (h, it) => !!(h && it && h.nope && h.nope[it.id]);
+
 /* 판매 확정 — 손님 판매(trySell)와 역제안 수락이 함께 쓴다. */
 function completeSale(h, it, price, m, mul) {
   const paid = Math.round(price * (has('golden') ? 1.1 : 1));

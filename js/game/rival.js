@@ -2,6 +2,7 @@
    라이벌 상점(까마귀 상회) — 4일째 개업, 매일 손님 한 명을 노리고, 못 판 손님을 가져가며,
    7일마다 판매 수로 대결한다. */
 
+const rivalStart = () => RD().start || RIVAL.start;
 function rivalInit() {
   if (!S.rival || typeof S.rival !== 'object') S.rival = { on: false, wk: { me: 0, them: 0, start: 0 }, w: 0, l: 0, aggro: 0, jam: 0 };
   return S.rival;
@@ -11,7 +12,7 @@ function rivalMorning() {
   const R = rivalInit();
   const news = { open: false, result: null, target: null };
   if (R.closed) return news;
-  if (!R.on && S.day >= RIVAL.start) {
+  if (!R.on && S.day >= rivalStart()) {
     R.on = true;
     R.wk = { me: 0, them: 0, start: S.day };
     news.open = true;
@@ -36,9 +37,9 @@ function rivalMorning() {
     } else {
       R.l++;
       R.aggro = Math.min(2, R.aggro + 1);
-      S.rep = Math.max(0, S.rep - 3);
+      S.rep = Math.max(0, S.rep - RD().lossRep);
       news.result = { win: false, me, them };
-      log(`${RIVAL.lines.lose} (나 ${me} : ${them}) 명성 −3.`, 'bad');
+      log(`${RIVAL.lines.lose} (나 ${me} : ${them}) 명성 −${RD().lossRep}.`, 'bad');
     }
     R.wk = { me: 0, them: 0, start: S.day };
     R.jam = 0;
@@ -46,7 +47,10 @@ function rivalMorning() {
   // 오늘 노릴 손님(질수록 더 많이)
   // 중요 손님(수집가·핵심 단골·마지막 손님 등)도 노린다. 개업 첫 손님(핀)과 귀족 손님만 빼고.
   const pool = S.heroes.filter(h => !h.vip && !h.bought && !h.opening);
-  rivalPickTargets(pool, 1 + R.aggro)
+  // 까마귀도 자기 가게 손님이 있다(난이도별): 우리 손님을 안 뺏어도 점수가 쌓인다
+  const wi = RD().walkin;
+  R.wk.them += Math.floor(wi) + (Math.random() < wi % 1 ? 1 : 0);
+  rivalPickTargets(pool, RD().targets + R.aggro)
     .forEach(h => {
       const want = CRAFTABLE.find(k => (h.wantSub ? ITEMS[k].sub === h.wantSub : ITEMS[k].t === h.want) && ITEMS[k].r <= 2);
       h.rivalOffer = Math.round(salePrice(h, { key: want || 'iron_sword', lvl: 0 }, 1) * rivalOfferMul(h));
@@ -71,7 +75,9 @@ function rivalNight() {
   let got = 0;
   for (const h of S.heroes) {
     if (h.bought || h.vip) continue;
-    if (h.rivalOffer || Math.random() < rivalStealRate()) got++;
+    // 우리 가게에서 트집을 잡았거나(안 산다·깎자) 기분이 상한 손님은 까마귀가 더 잘 데려간다
+    const sore = (h.nope && Object.keys(h.nope).length) || h.counter || h.mood < 2 ? RIVAL_AI.soreSteal : 0;
+    if (h.rivalOffer || Math.random() < rivalStealRate() + sore) got++;
   }
   R.wk.them += got;
   return got;

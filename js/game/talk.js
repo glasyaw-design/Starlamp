@@ -102,7 +102,7 @@ function dealWhy(h) {
 // 빠른 결판 승률: 기본 50% · 찾던 물건 +15% · 단골 +10% · 말솜씨 +2%/점 · 진행 중이면 점수 차 반영(최대 85%)
 function battleQuickP(h, it) {
   const B = h.battle;
-  let p = 0.5 + (it && matchMul(h, it.key) >= 1.5 ? 0.15 : 0) + (h.regular ? 0.1 : 0) + myStat('cha') * 0.02;
+  let p = RD().quick + (it && matchMul(h, it.key) >= 1.5 ? 0.15 : 0) + (h.regular ? 0.1 : 0) + myStat('cha') * 0.02;
   if (B) p += (B.me - B.them) * 0.2;
   p -= quickWear();
   return Math.max(0.1, Math.min(0.85, p));

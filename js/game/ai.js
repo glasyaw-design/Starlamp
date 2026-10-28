@@ -5,7 +5,7 @@
    · 경매 상대: 성향(짠돌이·수집광·충동파)에 따라 상한과 호가 방식이 다르다 */
 
 /* ---------- 까마귀 상회 ---------- */
-const RIVAL_AI = { maxTargets: 3, behindOffer: 0.88, aheadGap: 3, lastDaySteal: 0.8 };
+const RIVAL_AI = { maxTargets: 4, behindOffer: 0.88, aheadGap: 3, lastDaySteal: 0.8, soreSteal: 0.15 };
 function rivalMood() {
   const R = S.rival;
   if (!R || !R.on) return 'calm';
@@ -47,7 +47,7 @@ function rivalBigWhy(h) {
   if (h.rift) return '균열 손님';
   return null;
 }
-const rivalOfferMul = h => (rivalMood() === 'behind' ? RIVAL_AI.behindOffer : RIVAL.offerMul) * (h && rivalBigWhy(h) ? RD().bigOffer : 1);
+const rivalOfferMul = h => (rivalMood() === 'behind' ? Math.min(RIVAL_AI.behindOffer, RD().offer - 0.05) : RD().offer) * (h && rivalBigWhy(h) ? RD().bigOffer : 1);
 // 주간 마지막 날이면 못 판 손님을 더 많이 데려간다.
 const rivalStealRate = () => {
   const R = S.rival;

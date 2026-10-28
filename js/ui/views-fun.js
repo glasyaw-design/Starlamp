@@ -2,6 +2,21 @@
    재미 요소 화면 — 대화 흥정 창, 아침 사건 카드, 라이벌 점수판, 조합 실험대, 별빛 유산 */
 
 /* ---------- 대화 흥정 창 ---------- */
+// 예산이 모자랄 때 고르는 길(정가가 예산을 넘을 때만)
+function budgetRowHTML(h, it) {
+  const g = budgetGap(h, it);
+  if (!g || pickyNope(h, it) || h.bought || h.left) return '';
+  const f = faceFor(budgetChance(h, it));
+  const m = budgetM(h, it);
+  const mg = m != null ? marginOf(it, g.bud) : null;
+  const pouch = pouchFor(h, it);
+  const btns = [
+    m != null ? `<button class="btn small" data-act="sell" data-v="${h.id}|${it.id}|${m}" title="예산만큼만 받고 팔아요">예산에 드리기 <b>${fmt(g.bud)}G</b>${mg != null && mg < 0 ? ' <small class="bad">손해</small>' : ''}</button>` : '',
+    canCredit(h, it) ? `<button class="btn small" data-act="sellBudget" data-v="${h.id}|${it.id}|credit" title="원정 성공이면 전부, 실패면 절반, 다치면 못 받아요">외상 <b>${fmt(g.bud)}G</b> + 원정 뒤 ${fmt(g.gap)}G ${f[1]}</button>` : '',
+    pouch ? `<button class="btn small" data-act="sellBudget" data-v="${h.id}|${it.id}|pouch" title="모자란 금액을 손님 재료로 받아요">재료로 보태기 <b>${fmt(g.bud)}G</b> + ${pouch.take.map(([k, n]) => `${MATS[k].n} ${n}`).join(' · ')} ${f[1]}</button>` : ''
+  ].filter(Boolean);
+  return btns.length ? `<div class="hbudget-row"><small>💸 정가 ${fmt(g.full)}G · 예산 ${fmt(g.bud)}G (모자란 ${fmt(g.gap)}G)</small><div class="row">${btns.join('')}</div></div>` : '';
+}
 function openSell(hid) {
   const h = S.heroes.find(x => x.id == hid);
   if (!h) return;
@@ -14,22 +29,27 @@ function openSell(hid) {
   }
   const P = personaOf(h);
   const known = personaKnown(h);
+  // 찾는 것과 맞는 순서(딱 찾던 것 → 같은 종류 → 다른 종류) → 살 만한 순서. '👉 추천'은 손님 카드와 같은 물건(bestFor).
+  const rec = bestFor(h);
   const items = [...S.items].sort(
-    (a, b) => matchMul(h, b.key) - matchMul(h, a.key) || buyChance(h, b, 1).p - buyChance(h, a, 1).p || itemPow(b) - itemPow(a)
+    (a, b) => (rec && (b === rec.it) - (a === rec.it)) || wantTier(h, b.key) - wantTier(h, a.key) || matchMul(h, b.key) - matchMul(h, a.key) || buyChance(h, b, 1).p - buyChance(h, a, 1).p || itemPow(b) - itemPow(a)
   );
   const counter = h.counter && S.items.find(x => x.id === h.counter.iid);
   const say = counter ? `${P.no} …${fmt(h.counter.price)}G라면 살게요.` : h.mood < 2 ? '한 번만 더 마음에 안 들면 갈 거예요.' : helloLine(h);
   const row = it => {
     const mul = matchMul(h, it.key);
     const tags = [
-      mul >= 1.5 ? '<span class="tag">찾던 물건</span>' : mul > 1 ? '<span class="tag">좋아하는 종류</span>' : '',
+      wantTier(h, it.key) === 2 ? '<span class="tag">찾던 물건</span>' : wantTier(h, it.key) === 1 ? '<span class="tag">같은 종류</span>' : '',
+      CLASSES[h.cls].fav.includes(ITEMS[it.key].sub) ? '<span class="tag">좋아하는 종류</span>' : '',
       h.el && itemElem(it) === h.el ? '<span class="tag good">선호 속성</span>' : '',
       S.trend && ITEMS[it.key].sub === S.trend.sub ? '<span class="tag good">유행</span>' : '',
       demandMul(it.key, it) > 1 ? '<span class="tag good">수요↑</span>' : '',
       goalMul(it.key) > 1 ? `<span class="tag weak">약점 ×${goalMul(it.key)}</span>` : '',
-      gearSense(h, it) > 0 ? '<span class="tag good">원정에 든든</span>' : gearSense(h, it) < 0 ? '<span class="tag fail">원정엔 약함</span>' : ''
+      gearSense(h, it) > 0 ? '<span class="tag good">원정에 든든</span>' : gearSense(h, it) < 0 ? '<span class="tag fail">원정엔 약함</span>' : '',
+      pickyNope(h, it) ? '<span class="tag fail">마음에 안 든대요</span>' : pickyOf(h, it, 1).p >= 0.15 ? `<span class="tag fail" title="이 난이도에선 맞지 않는 물건에 값을 깎자고 하거나 안 살 수 있어요">트집 잡힐 수도 ${Math.round(pickyOf(h, it, 1).p * 100)}%</span>` : ''
     ].join('');
     const mg = marginOf(it, salePrice(h, it, 1));
+    const bw = budgetRowHTML(h, it);
     const opts = [
       [0.9, '할인'],
       [1, '정가'],
@@ -37,12 +57,12 @@ function openSell(hid) {
     ]
       .map(([m, lab]) => {
         const bc = buyChance(h, it, m);
-        const over = bc.price > budgetFor(h, it);
+        const over = bc.price > budgetFor(h, it) || pickyNope(h, it);
         const f = faceFor(bc.p);
-        return `<button class="btn hag${m === 1 ? ' primary' : ''}" data-act="sell" data-v="${h.id}|${it.id}|${m}" ${over ? 'disabled' : ''} title="${over ? '예산을 넘어요' : f[2]}"><small>${lab}</small><b>${fmt(bc.price)}G</b><span class="face" aria-label="${over ? '예산 초과' : f[2]}">${over ? '💸' : f[1]}</span></button>`;
+        return `<button class="btn hag${m === 1 ? ' primary' : ''}" data-act="sell" data-v="${h.id}|${it.id}|${m}" ${over ? 'disabled' : ''} title="${pickyNope(h, it) ? '이 물건은 마음에 안 든대요' : over ? '예산을 넘어요' : f[2]}"><small>${lab}</small><b>${fmt(bc.price)}G</b><span class="face" aria-label="${pickyNope(h, it) ? '안 산대요' : over ? '예산 초과' : f[2]}">${pickyNope(h, it) ? '🙅' : over ? '💸' : f[1]}</span></button>`;
       })
       .join('');
-    return `<div class="hrow${mul >= 1.5 ? ' match' : ''}">${tile(it.key, it.lvl)}<div class="hinfo"><b class="rn${ITEMS[it.key].r}">${it === items[0] ? '<span class="tag hbest">👉 추천</span>' : ''}${iname(it)}</b>${elTag(itemElem(it), 1)}<div class="htags">${tags}</div>${contribLineHTML(h, it)}<small class="muted">${mg === null ? '원가 미상' : `이윤 ${mg >= 0 ? '+' : '−'}${fmt(Math.abs(mg))}G`}</small></div><div class="hopts">${opts}</div></div>`;
+    return `<div class="hrow${mul >= 1.5 ? ' match' : ''}">${tile(it.key, it.lvl)}<div class="hinfo"><b class="rn${itemR(it)}">${rec && it === rec.it && rec.tier >= 1 ? `<span class="tag hbest">👉 ${rec.tier === 2 ? '추천' : '비슷한 것'}</span>` : ''}${iname(it)}</b>${elTag(itemElem(it), 1)}<div class="htags">${tags}</div>${contribLineHTML(h, it)}<small class="muted">${mg === null ? '원가 미상' : `이윤 ${mg >= 0 ? '+' : '−'}${fmt(Math.abs(mg))}G`}</small></div><div class="hopts">${opts}</div>${bw}</div>`;
   };
   showModal(
     `${h.name}와(과) 흥정`.replace(/(\S+)와\(과\)/, (m, w) => j(w, '와/과')),
@@ -50,7 +70,7 @@ function openSell(hid) {
       <div class="hsay"><p class="bubble">"${say}"</p><small class="muted">${CLASSES[h.cls].n} · 찾는 것 <b>${wantText(h)}</b>${known ? ` · 성격 <b>${P.n}</b>` : ' · 성격은 흥정해 보면 알 수 있어요'}${h.rivalOffer ? ` · <span class="rivaltag">까마귀 상회가 ${fmt(h.rivalOffer)}G를 불렀대요</span>` : ''}</small></div>
       <div class="hbudget"><small>예산</small><b>${fmt(h.budget)}G</b></div></div>
      ${talkRowHTML(h)}${S.day >= 2 && !h.opening ? tipHTML('contrib') || (items.some(it => gearSense(h, it)) ? tipHTML('sense') : '') : ''}
-     ${counter ? `<div class="hcounter"><span>${iname(counter)} · 손님이 부른 값 <b>${fmt(h.counter.price)}G</b></span><button class="btn primary" data-act="acceptCounter" data-v="${h.id}">좋아요, 그 값에</button><button class="btn" data-act="declineCounter" data-v="${h.id}">안 돼요</button></div>` : ''}
+     ${counter ? `<div class="hcounter"><span>${h.counter.why ? `<em class="cwhy">"${h.counter.why}"</em> ` : ''}${iname(counter)} · 손님이 부른 값 <b>${fmt(h.counter.price)}G</b></span><button class="btn primary" data-act="acceptCounter" data-v="${h.id}">좋아요, 그 값에</button><button class="btn" data-act="declineCounter" data-v="${h.id}">안 돼요</button></div>` : ''}
      <div class="shlist">${
        easyOn() && items.length > 4
          ? items.slice(0, 3).map(row).join('') + `<details class="hmore"><summary>다른 물건 ${items.length - 3}개 더 보기</summary>${items.slice(3).map(row).join('')}</details>`
@@ -90,29 +110,54 @@ function rivalHTML() {
   if (!R || !R.on || S.over) return '';
   const sc = rivalScore();
   const lead = sc.me > sc.them ? 'win' : sc.me < sc.them ? 'lose' : 'tie';
-  const fresh = S.day - RIVAL.start < RIVAL.week && !R.w && !R.l;
+  const fresh = S.day - rivalStart() < RIVAL.week && !R.w && !R.l;
   return `<div class="rival ${lead}${fresh ? ' fresh' : ''}"><span class="rcrow" aria-hidden="true">🐦</span><b>VS ${RIVAL.n}</b>${fresh ? '<span class="tag rnew">새 라이벌</span>' : ''}<span class="rs"><em>나 ${sc.me}</em> : <em>${sc.them}</em></span><span class="muted">이번 주 판매 · ${sc.left}일 남음 · 전적 ${R.w}승 ${R.l}패</span>${fresh ? `<span class="rhelp">못 판 손님은 밤에 까마귀 상회로 가요. 🐦 표시 손님을 먼저 잡고, ${RIVAL.week}일 동안 더 많이 팔면 이겨요.</span>` : ''}</div>`;
 }
 
-/* ---------- 조합 실험대 ---------- */
+/* ---------- 조합 실험대(개편) ---------- */
 function experimentHTML() {
   if (!expOpen()) return '';
-  const own = Object.keys(S.mats)
-    .filter(k => S.mats[k] > 0)
-    .sort((a, b) => MATS[b].r - MATS[a].r);
-  const sel = (S.expSel || []).filter(m => (S.mats[m] || 0) > 0);
-  const left = expTargets().length;
+  const k = labTarget();
   const logs = (S.expLog || [])
     .slice(0, 4)
-    .map(
-      e =>
-        `<li class="${e.ok ? 'ok' : ''}">${e.mats.map(m => MATS[m].n).join(' + ')} → ${e.ok ? `<b>${ITEMS[e.key].n} 발견!</b>` : e.near ? `${j(e.near.kind, '와/과')} ${e.near.of}가지 중 <b>${e.near.n}가지</b> 일치` : '반응 없음'}</li>`
+    .map(e =>
+      e.ok
+        ? `<li class="ok">${e.mats.map(m => MATS[m].n).join(' + ')} → <b>${ITEMS[e.key].n} 발견!</b></li>`
+        : e.hit
+          ? `<li>${e.key && ITEMS[e.key] ? `${clueTitle(e.key)} · ` : ''}${e.hit.map(m => `<b>✔ ${MATS[m].n}</b>`).concat(e.miss.map(m => `✖ ${MATS[m].n}`)).join(' · ')}${e.of ? ` <span class="muted">(${e.found}/${e.of})</span>` : ''}</li>`
+          : `<li>${e.mats.map(m => MATS[m].n).join(' + ')} → ${e.near ? `${j(e.near.kind, '와/과')} ${e.near.of}가지 중 ${e.near.n}가지 일치` : '반응 없음'}</li>`
     )
     .join('');
-  return `<section class="sec exp"><div class="spread"><h2>조합 실험대</h2><span class="muted">아직 모르는 조합식 ${left}개</span></div>
-   <p class="lead">재료 2~3가지를 골라 섞어 보세요. 딱 맞으면 조합식을 깨우치고, 아니면 몇 가지가 맞는지 알려 줘요. 고른 재료는 하나씩 사라져요(수수료 ${EXP_FEE}G).</p>
-   <div class="expmats">${own.map(m => `<button class="mchip${sel.includes(m) ? ' on' : ''}" data-act="expToggle" data-v="${m}">${tile(m)}<span>${MATS[m].n}</span><small>${S.mats[m]}</small></button>`).join('') || '<span class="muted">재료가 없어요.</span>'}</div>
+  const choices = expChoices()
+    .map(c => {
+      const lv = (S.clues && S.clues[c]) || 0;
+      return `<button class="btn small${c === k ? ' on' : ''}" data-act="expPick" data-v="${c}">${clueTitle(c)}${lv ? ` <small>단서 ${lv}/3</small>` : ''}</button>`;
+    })
+    .join('');
+  if (!k)
+    return `<section class="sec exp"><div class="spread"><h2>조합 실험대</h2><span class="muted">모르는 희귀 조합식 ${expTargets().length}개</span></div>
+   <p class="lead">풀어 볼 조합식을 하나 고르세요. 재료를 섞으면 <b>그 재료가 들어가는지</b> 하나하나 알려 줘요.</p>
+   ${choices ? `<div class="row exptgts">${choices}</div>` : '<p class="muted">지금은 풀 조합식이 없어요.</p>'}${logs ? `<ul class="explog">${logs}</ul>` : ''}</section>`;
+  const need = recMats(k);
+  const mk = expMarks(k);
+  const c = clueInfo(k);
+  const own = Object.keys(S.mats)
+    .filter(m => S.mats[m] > 0)
+    .map(m => ({ m, st: mk[m] === 1 ? 'yes' : mk[m] === 0 ? 'no' : !expGradeOk(k, m) ? 'grade' : 'maybe' }))
+    .sort((a, b) => ['yes', 'maybe', 'grade', 'no'].indexOf(a.st) - ['yes', 'maybe', 'grade', 'no'].indexOf(b.st) || MATS[b.m].r - MATS[a.m].r);
+  const sel = (S.expSel || []).filter(m => (S.mats[m] || 0) > 0);
+  const found = need.filter(([m]) => mk[m] === 1).length;
+  const slots = need
+    .map(([m, n]) => (mk[m] === 1 ? `<span class="eslot ok">${tile(m)}<b>${MATS[m].n}</b><small>×${n}</small></span>` : `<span class="eslot"><b>${RN[MATS[m].r]} ${c.lv >= 2 ? MAT_KIND[m] || '재료' : '?'}</b><small>×${n}</small></span>`))
+    .join('');
+  const chip = ({ m, st }) =>
+    `<button class="mchip ${st}${sel.includes(m) ? ' on' : ''}" data-act="expToggle" data-v="${m}" ${st === 'no' ? 'disabled' : ''} title="${{ yes: '들어가요', no: '안 들어가요', grade: '등급이 안 맞아요(필요한 등급에 없음)', maybe: '아직 몰라요' }[st]}">${tile(m)}<span>${MATS[m].n}</span><small>${st === 'yes' ? '✔' : st === 'no' ? '✖' : S.mats[m]}</small></button>`;
+  return `<section class="sec exp"><div class="spread"><h2>조합 실험대</h2><span class="muted">목표 · <b class="rn${ITEMS[k].r}">??? ${clueTitle(k)}</b>${c.lv ? ` · 단서 ${c.lv}/3` : ''}</span></div>
+   <div class="exptarget"><div class="eslots">${slots}</div><small class="muted">찾은 재료 ${found} / ${need.length} · 모두 찾으면 조합식을 깨우쳐요</small></div>
+   <p class="lead">재료를 1~3가지 골라 섞어 보세요. 고른 재료마다 <b>✔ 들어가요 / ✖ 아니에요</b>를 알려 줘요. 맞은 재료는 돌려받고, 틀린 재료만 1개씩 사라져요(수수료 ${EXP_FEE}G). 흐린 재료는 등급이 안 맞는 거예요.</p>
+   <div class="expmats">${own.filter(x => x.st !== 'no').map(chip).join('') || '<span class="muted">섞어 볼 재료가 없어요. 탐색에서 모아 오세요.</span>'}</div>
    <div class="row"><button class="btn primary" data-act="experiment" ${canExperiment() ? '' : 'disabled'}>⚗ 섞어 보기${sel.length ? ` (${sel.map(m => MATS[m].n).join(' + ')})` : ''}</button></div>
+   <details class="cmore"><summary>다른 조합식 고르기</summary><div class="row exptgts">${choices}</div></details>
    ${logs ? `<ul class="explog">${logs}</ul>` : ''}</section>`;
 }
 

@@ -45,6 +45,22 @@ const FACES = [
 ];
 // 거절당한 뒤 손님이 부르는 값(제시가와 할인가의 사이)
 const COUNTER = { min: 0.9 };
+// 까다로운 손님(난이도별): 사기로 마음먹은 뒤에도 물건이 마음에 안 들면 값을 깎자고 하거나(cut) 그 물건은 안 산다(nope).
+// 확률 = base + 해당하는 트집(찾던 종류가 아님 off · 세부가 다름 sub · 원정엔 약함 weak · 웃돈 up). 단골은 ×0.7.
+// cut: 깎아 달라는 비율, cutP: 트집을 잡았을 때 깎자고 할 확률(나머지는 안 삼). 할인가로 내놓았으면 깎지 않고 안 산다.
+const PICKY = {
+  easy: { base: 0.02, off: 0.08, sub: 0.03, weak: 0.05, up: 0.04, cut: 0.1, cutP: 0.8 },
+  normal: { base: 0.05, off: 0.15, sub: 0.06, weak: 0.1, up: 0.08, cut: 0.15, cutP: 0.65 },
+  hard: { base: 0.08, off: 0.22, sub: 0.1, weak: 0.14, up: 0.12, cut: 0.2, cutP: 0.55 },
+  nightmare: { base: 0.12, off: 0.3, sub: 0.14, weak: 0.18, up: 0.16, cut: 0.25, cutP: 0.45 }
+};
+const PICKY_WHY = {
+  off: ['찾던 물건이 아니잖아요.', '제가 찾는 건 이게 아닌데요.'],
+  sub: ['찾던 거랑 조금 다르네요.', '비슷하긴 한데 딱 그건 아니에요.'],
+  weak: ['이걸로 원정을 버틸 수 있을지 모르겠어요.', '오늘 밤 원정엔 좀 약해 보여요.'],
+  up: ['값이 좀 세네요.', '그 값은 너무 비싸요.'],
+  base: ['여기 흠집이 좀 보이는데요.', '마음에 쏙 들진 않네요.']
+};
 
 /* ---------- 아침 사건 카드 ----------
    2일째부터 아침마다 3장 중 1장을 고른다(안 골라도 된다). cost는 금화, cond는 나올 조건. */
@@ -89,11 +105,15 @@ const RIVAL = {
    weak    사명 약점 장비를 살 손님을 가로채려는 집착(0~1)
    adapt   빠른 결판을 연달아 쓰면 한 번마다 빠른 결판 승률이 떨어지는 폭(최대 adaptMax)
    steal   밤에 못 판 손님을 데려가는 비율 */
+// 까마귀 상회 강도(RC2 강화 — 난이도마다 확실히 다르게)
+//  start 개업일 · targets 하루에 노리는 손님 수(기본) · offer 노리는 손님에게 부르는 값(정가 대비) · undercut 우리가 더 비싸면 구매 확률
+//  quick 빠른 결판 기본 승률 · walkin 우리 손님을 안 뺏어도 하루에 버는 판매 점수 · lossRep 주간 대결에서 지면 명성
+//  honest·floor 배틀 예고가 진짜일 확률 · big·bigOffer 중요 손님 집착 · weak 사명 약점 장비 손님 집착 · adapt 빠른 결판 버릇 · steal 못 판 손님 데려가기
 const RIVAL_DIFF = {
-  easy: { honest: 0.75, floor: 0.55, big: 0.3, bigOffer: 1, weak: 0, adapt: 0.02, adaptMax: 0.1, steal: 0.5 },
-  normal: { honest: 0.6, floor: 0.45, big: 0.6, bigOffer: 0.92, weak: 0.4, adapt: 0.04, adaptMax: 0.2, steal: 0.6 },
-  hard: { honest: 0.55, floor: 0.4, big: 0.8, bigOffer: 0.88, weak: 0.7, adapt: 0.05, adaptMax: 0.25, steal: 0.62 },
-  nightmare: { honest: 0.5, floor: 0.35, big: 1, bigOffer: 0.85, weak: 1, adapt: 0.06, adaptMax: 0.3, steal: 0.65 }
+  easy: { start: 5, targets: 1, offer: 1, undercut: -0.1, quick: 0.55, walkin: 0, lossRep: 2, honest: 0.75, floor: 0.55, big: 0.3, bigOffer: 1, weak: 0, adapt: 0.02, adaptMax: 0.1, steal: 0.45 },
+  normal: { start: 4, targets: 1, offer: 0.92, undercut: -0.16, quick: 0.5, walkin: 0.5, lossRep: 3, honest: 0.6, floor: 0.45, big: 0.6, bigOffer: 0.92, weak: 0.4, adapt: 0.04, adaptMax: 0.2, steal: 0.6 },
+  hard: { start: 3, targets: 2, offer: 0.85, undercut: -0.22, quick: 0.43, walkin: 1, lossRep: 5, honest: 0.5, floor: 0.38, big: 0.85, bigOffer: 0.86, weak: 0.7, adapt: 0.05, adaptMax: 0.25, steal: 0.7 },
+  nightmare: { start: 3, targets: 2, offer: 0.78, undercut: -0.28, quick: 0.36, walkin: 1.6, lossRep: 8, honest: 0.42, floor: 0.3, big: 1, bigOffer: 0.8, weak: 1, adapt: 0.07, adaptMax: 0.32, steal: 0.8 }
 };
 const RD = () => RIVAL_DIFF[(S && S.diff) || 'normal'] || RIVAL_DIFF.normal;
 

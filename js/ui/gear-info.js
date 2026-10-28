@@ -51,7 +51,7 @@ function openGear(iid, hid) {
     .join('');
   showModal(
     `장비 상세 · ${iname(it)}`,
-    `<div class="gearinfo"><div class="ghead">${tile(it.key, it.lvl, 1)}<div><b class="rn${ITEMS[it.key].r}">${iname(it)}</b> ${elTag(itemElem(it))}<small class="muted">${SUB[ITEMS[it.key].sub][1]} · 감정가 ${fmt(itemVal(it))}G</small></div></div>
+    `<div class="gearinfo"><div class="ghead">${tile(it.key, it.lvl, 1)}<div><b class="rn${itemR(it)}">${iname(it)}</b> ${elTag(itemElem(it))}<small class="muted">${SUB[ITEMS[it.key].sub][1]} · 감정가 ${fmt(itemVal(it))}G</small></div></div>
      ${
        c
          ? `<p class="gwho"><b>${h.name}</b> · ${CLASSES[h.cls].n} · 오늘 밤 <b>${T.region}</b> 원정 (${T.foe})</p>${contribRowsHTML(c)}

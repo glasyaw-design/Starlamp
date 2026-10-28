@@ -192,7 +192,7 @@ let REC_N = 10;
 const REC_STEP = 10;
 function workshopTabs() {
   const ready = CRAFTABLE.filter(k => recipeVisible(k) && S.known[k] && canCraft(k)).length;
-  const clueN = Object.keys(S.clues || {}).filter(k => ITEMS[k] && !recipeVisible(k) && S.clues[k] > 0).length;
+  const clueN = Object.keys(S.clues || {}).filter(k => ITEMS[k] && !S.known[k] && S.clues[k] > 0).length;
   const tabs = [
     ['craft', '합성', ready ? `${ready}` : ''],
     ['forge', enchantOpen() ? '강화 · 속성' : '강화 · 융합', ''],
@@ -280,6 +280,23 @@ function craftPane() {
    <div class="recipes">${shown.map(recipeRow).join('') || `<p class="muted">${F === 'ready' ? '지금 바로 만들 수 있는 게 없어요. 탐색이나 경매로 재료를 모아 보세요.' : '해당하는 조합식이 없어요.'}</p>`}</div>
    ${more ? `<button class="btn small wmore" data-act="recMore">${Math.min(more, REC_STEP)}개 더 보기 <span class="muted">(남은 ${more}개)</span></button>` : ''}</section>`;
 }
+// 모자란 재료를 어디서 구하는지(열린 탐색지 · 오늘 좌판) 한 줄로 — 강화가 막혔을 때
+function matWhereHTML(ms) {
+  return ms
+    .map(m => {
+      const regs = REGIONS.filter(r => r.drops.some(([k]) => k === m)).sort((a, b) => a.rep - b.rep);
+      const open = regs.filter(r => S.rep >= r.rep && !(S.world.corr[r.id] >= 100));
+      const shut = regs.filter(r => S.rep < r.rep);
+      const st = (S.stall || []).find(x => x.key === m && x.stock > 0);
+      const parts = [
+        open.length ? `탐색: <b>${open.map(r => r.n).join(' · ')}</b>` : '',
+        !open.length && shut.length ? `명성 ${shut[0].rep}이면 <b>${shut[0].n}</b>이 열려요` : '',
+        st ? `오늘 경매장 좌판 <b>${fmt(st.price)}G</b>` : ''
+      ].filter(Boolean);
+      return `<div class="matwhere"><span>💎 ${MATS[m].n} 구하는 곳</span><small>${parts.join(' · ') || '탐색 지역을 넓혀 보세요'}</small>${open.length && S.ap > 0 ? '<button class="btn small" data-act="tab" data-v="explore">탐색으로</button>' : ''}</div>`;
+    })
+    .join('');
+}
 function forgePane() {
   const it = S.items.find(x => x.id === S.sel);
   let forge = '<p class="desc">강화할 물건을 골라 주세요. 같은 물건끼리는 융합도 돼요.</p>';
@@ -287,7 +304,7 @@ function forgePane() {
     const e = enhInfo(it);
     const dup = S.items.filter(x => x.key === it.key && x.id !== it.id).length;
     const needOk = Object.entries(e.need).every(([m, c]) => (S.mats[m] || 0) >= c);
-    const nextPow = Math.round(ITEMS[it.key].p * (1 + 0.18 * (it.lvl + 1)));
+    const nextPow = itemPow({ ...it, lvl: it.lvl + 1 }); // 품질·등급·저주까지 똑같이 계산(예전엔 빠져서 '명품'은 강화 뒤가 더 낮게 보였음)
     const msg =
       {
         success: '<span style="color:var(--good)">강화 성공!</span>',
@@ -298,8 +315,11 @@ function forgePane() {
         fuse: '<span style="color:var(--good)">융합 완료!</span>'
       }[lastForge] || '';
     lastForge = null;
+    const tierMsg = lastTier ? `<div class="tierup">✦ 등급 상승! <b class="rn${lastTier}">${RN[lastTier]}</b> 등급이 됐어요 · 전투력 +${Math.round(TIER_POW * 100)}% · 값 ×${TIER_VAL}</div>` : '';
+    lastTier = null;
+    const tp = e.ok ? tierChance(it, it.lvl + 1) : 0;
     forge = `<div class="forge">${tile(it.key, it.lvl, 1)}<div style="display:flex;flex-direction:column;gap:10px;min-width:0">
-      <div class="spread"><h3 class="rn${ITEMS[it.key].r}">${iname(it)} ${elTag(itemElem(it))}</h3>${msg}</div>
+      <div class="spread"><h3 class="rn${itemR(it)}">${iname(it)} ${elTag(itemElem(it))}</h3>${msg}</div>
       <div class="stats2"><div class="stat"><small>전투력</small><b>${itemPow(it)}${e.ok ? ` → ${nextPow}` : ''}</b></div><div class="stat"><small>감정가</small><b>${fmt(itemVal(it))}G</b></div>
       ${e.ok ? `<div class="stat"><small>성공 확률</small><b>${e.rate}%</b><div class="meter"><i style="width:${e.rate}%"></i></div></div><div class="stat"><small>비용</small><b>${fmt(e.cost)}G</b></div>` : '<div class="stat"><small>상태</small><b>최대 강화</b></div>'}</div>
       ${
@@ -309,11 +329,12 @@ function forgePane() {
                 ([m, c]) =>
                   `<span class="${(S.mats[m] || 0) >= c ? 'ok' : 'short'}">${MATS[m].n} ${S.mats[m] || 0}/${c}</span>`
               )
-              .join('')}</div>`
+              .join('')}</div>${needOk ? '' : matWhereHTML(Object.keys(e.need).filter(m => (S.mats[m] || 0) < e.need[m]))}`
           : ''
       }
       ${S.bag.protect || S.bag.bless ? `<div class="row">${S.bag.bless ? `<button class="btn small${S.useBless ? ' on' : ''}" data-act="toggle" data-v="useBless">축복 주문서 ${S.useBless ? '사용' : '미사용'} (${S.bag.bless})</button>` : ''}${S.bag.protect ? `<button class="btn small${S.useProt ? ' on' : ''}" data-act="toggle" data-v="useProt">보호 주문서 ${S.useProt ? '사용' : '미사용'} (${S.bag.protect})</button>` : ''}</div>` : ''}
-      ${it.lvl >= 4 && e.ok ? '<p class="muted" style="margin:0;font-size:12px">+4부터는 실패하면 한 단계 내려갈 수 있어요.</p>' : ''}
+      ${tierMsg}${tp ? `<p class="tiernext">✦ 이번 강화에 성공하면 <b>${Math.round(tp * 100)}%</b> 확률로 <b class="rn${itemR(it) + 1}">${RN[itemR(it) + 1]}</b> 등급으로 올라요</p>` : e.ok && it.lvl < 4 && tierCap(it) > itemUp(it) ? '<p class="tiernext">✦ +5부터는 강화에 성공할 때 가끔 등급(희귀도)이 올라요</p>' : ''}${itemUp(it) ? `<p class="tiernext">✦ 강화로 ${itemUp(it)}단계 오른 <b class="rn${itemR(it)}">${RN[itemR(it)]}</b> 장비예요</p>` : ''}
+      ${it.lvl >= 4 && e.ok ? '<p class="muted" style="margin:0;font-size:12px">+4부터는 실패하면 한 단계 내려갈 수 있어요. 한 번 오른 등급은 그대로 남아요.</p>' : ''}
       <div class="row"><button class="btn primary" data-act="enhance" ${!e.ok || S.gold < e.cost || !needOk ? 'disabled' : ''}>강화 (+${it.lvl + 1})</button>
       <button class="btn" data-act="fuse" ${dup && it.lvl < 10 ? '' : 'disabled'}>같은 물건 융합 (보유 ${dup}개) · 확정 +1</button>
       <button class="btn" data-act="gearInfo" data-v="${it.id}">⚔️ 장비 상세 · 예상 기여도</button></div></div></div>${enchantHTML(it)}`;
@@ -348,7 +369,9 @@ function viewAuction() {
    <div class="stall">${S.stall
      .map((w, i) => {
        const p = stallPrice(w);
-       return `<div class="ware">${tile(w.key)}<div><b>${MATS[w.key].n}</b><br><span class="muted">${fmt(p)}G · 남은 ${w.stock}개</span></div><button class="btn small" data-act="buy" data-v="${i}" ${w.stock <= 0 || S.gold < p ? 'disabled' : ''}>사기</button></div>`;
+       const can = Math.min(w.stock, Math.floor(S.gold / Math.max(1, p)));
+       const have = S.mats[w.key] || 0;
+       return `<div class="ware">${tile(w.key)}<div><b>${MATS[w.key].n}</b><br><span class="muted">${fmt(p)}G · 남은 ${w.stock}개 · 창고 ${have}</span></div><div class="wbuy"><button class="btn small" data-act="buy" data-v="${i}|1" ${can < 1 ? 'disabled' : ''}>1개</button>${w.stock >= 3 ? `<button class="btn small" data-act="buy" data-v="${i}|3" ${can < 3 ? 'disabled' : ''} title="${fmt(p * 3)}G">3개</button>` : ''}<button class="btn small" data-act="buy" data-v="${i}|max" ${can < 2 ? 'disabled' : ''} title="${can ? `${can}개 · ${fmt(p * can)}G` : ''}">모두${can >= 2 ? ` ${can}` : ''}</button></div></div>`;
      })
      .join('')}</div></section>`;
 }
@@ -470,7 +493,7 @@ function viewBlack() {
     .slice(0, 12)
     .map(
       it =>
-        `<div class="sellrow">${tile(it.key, it.lvl)}<div><b class="rn${ITEMS[it.key].r}">${iname(it)}</b><div class="muted" style="font-size:12px">정상 감정가 ${fmt(itemVal(it))}G → 암시장 ${fmt(bmSellPrice(it))}G · 의심 +${bmHeat(it)}</div></div><div class="opts"><button class="btn small" data-act="bmSell" data-v="${it.id}">넘기기</button></div></div>`
+        `<div class="sellrow">${tile(it.key, it.lvl)}<div><b class="rn${itemR(it)}">${iname(it)}</b><div class="muted" style="font-size:12px">정상 감정가 ${fmt(itemVal(it))}G → 암시장 ${fmt(bmSellPrice(it))}G · 의심 +${bmHeat(it)}</div></div><div class="opts"><button class="btn small" data-act="bmSell" data-v="${it.id}">넘기기</button></div></div>`
     )
     .join('');
   return (
@@ -541,7 +564,7 @@ function renderSide() {
       .sort((a, b) => itemPow(b) - itemPow(a))
       .map(
         it =>
-          `<button class="invrow${it.id === S.sel ? ' on' : ''}" data-act="sel" data-v="${it.id}">${tile(it.key, it.lvl)}<span class="rn${ITEMS[it.key].r}">${iname(it)}</span><small>${SUB[ITEMS[it.key].sub][1]} · ${itemPow(it)}${itemElem(it) && elementsOn() ? ` · ${elName(itemElem(it))}` : ''}</small></button>`
+          `<button class="invrow${it.id === S.sel ? ' on' : ''}" data-act="sel" data-v="${it.id}">${tile(it.key, it.lvl)}<span class="rn${itemR(it)}">${iname(it)}</span><small>${SUB[ITEMS[it.key].sub][1]} · ${itemPow(it)}${itemElem(it) && elementsOn() ? ` · ${elName(itemElem(it))}` : ''}</small></button>`
       )
       .join('') || '<span class="muted">진열대가 텅 비었어요.</span>';
   $('#log').innerHTML = S.log

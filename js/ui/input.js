@@ -27,6 +27,11 @@ const ACT = {
     commit();
   },
   openSell: v => openSell(v),
+  // 예산이 모자랄 때: 예산에 드리기 · 외상 · 재료로 보태기
+  sellBudget: v => {
+    const [h, i, kind] = v.split('|');
+    sellBudget(+h, +i, kind);
+  },
   sell: v => {
     const [h, i, m] = v.split('|');
     trySell(+h, +i, +m);
@@ -70,6 +75,17 @@ const ACT = {
     commit();
   },
   experiment: () => experiment(),
+  expPick: v => {
+    if (expSetTarget(v)) commit();
+  },
+  // 단서 카드 → 실험대로
+  expGo: v => {
+    if (expSetTarget(v)) {
+      S.tab = 'workshop';
+      WTAB = 'exp';
+      commit();
+    }
+  },
   openLegacy: () => openLegacy(),
   legacyRetry: () => {
     if (S && S.over) showEnd(S.over === 'win');
@@ -143,7 +159,10 @@ const ACT = {
   pass: v => pass(+v),
   openConsign: () => openConsign(),
   consign: v => consign(+v),
-  buy: v => buy(+v),
+  buy: v => {
+    const [i, n] = String(v).split('|');
+    buy(+i, n === 'max' ? 'max' : +n || 1);
+  },
   upgrade: v => upgrade(v),
   hire: v => hire(v),
   fire: v => fire(v),

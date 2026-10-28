@@ -111,8 +111,10 @@ function buyChance(h, it, m) {
     p += v;
     parts.push([lab, v]);
   };
+  const dI = ITEMS[it.key],
+    exact = dI.t === h.want && (!h.wantSub || dI.sub === h.wantSub); // 이름표만 정확하게(수치는 그대로)
   add(
-    mul >= 1.5 ? '찾던 물건' : mul > 1 ? '' : '찾는 물건이 아님',
+    mul >= 1.5 ? (exact ? '찾던 물건' : '찾던 것과 비슷함') : mul > 1 ? '' : '찾는 물건이 아님',
     mul >= 1.5 ? BUY_W.needBest : mul > 1 ? 0 : BUY_W.needNone
   );
   if (h.el && itemElem(it) === h.el) add(`선호 속성 ${elName(h.el)}`, BUY_W.elem);
@@ -121,6 +123,7 @@ function buyChance(h, it, m) {
   if (S.rep >= 60) add('상점 명성', BUY_W.fame);
   add('사장님 말솜씨', myStat('cha') * STAT_FX.cha.buy);
   if (h.talkBonus) add('대화', h.talkBonus);
+  if (typeof itemUp === 'function' && itemUp(it)) add('등급이 오른 장비', 0.04 * itemUp(it));
   // 손님도 원정에 쓸모 있는지 본다(오늘 밤 원정지 기준)
   const gs = typeof gearSense === 'function' ? gearSense(h, it) : 0;
   if (gs) add(gs > 0 ? '원정에 든든해 보임' : '원정엔 약해 보임', gs > 0 ? BUY_W.strong : BUY_W.weakGear);
@@ -131,7 +134,7 @@ function buyChance(h, it, m) {
   if (h.mood < 2) add('한 번 거절함', BUY_W.refused);
   const P = typeof personaOf === 'function' ? personaOf(h) : null;
   if (P) add(`성격 · ${P.n}`, (P.mod[m] || 0) + (h.pers === 'boast' && m === 1.3 && ITEMS[it.key].r < 3 ? -0.08 : 0));
-  if (h.rivalOffer && price > h.rivalOffer) add('라이벌이 더 싸게 부름', RIVAL.undercut);
+  if (h.rivalOffer && price > h.rivalOffer) add('라이벌이 더 싸게 부름', RD().undercut);
   // 개업 첫 손님(핀)은 정가 이하면 거의 꼭 산다(첫 판매에서 막히지 않게)
   if (h.opening && m <= 1) p = Math.max(p, 0.97);
   return { p: Math.max(0.05, Math.min(1, p)), parts, price };

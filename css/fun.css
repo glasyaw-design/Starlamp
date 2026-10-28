@@ -1921,6 +1921,15 @@ details.quick[open] > summary::before {
   margin-left: auto;
   color: var(--amber);
 }
+.rec.off {
+  border: 1px dashed #ffffff22;
+}
+.rec.off b {
+  color: var(--muted);
+}
+.rec.off em {
+  color: var(--muted);
+}
 .rec.none b {
   color: var(--muted);
   font-weight: 400;
@@ -2698,4 +2707,159 @@ body.rolling #app {
   .cstat {
     grid-template-columns: 1fr;
   }
+}
+
+/* ---------- 관리자 전용 동시 접속자 표시 ---------- */
+#liveChip {
+  position: fixed;
+  left: 8px;
+  bottom: 8px;
+  z-index: 9999;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #7ad0ff66;
+  background: #0e1119e6;
+  color: #bfe6ff;
+  cursor: pointer;
+  max-width: calc(100vw - 16px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#liveChip.bad {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+/* 강화 재료가 모자랄 때: 구하는 곳 */
+.matwhere {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px dashed #7ad0ff55;
+  background: #7ad0ff0d;
+  font-size: 13px;
+}
+.matwhere small {
+  flex: 1 1 200px;
+  color: var(--muted);
+}
+.matwhere small b {
+  color: var(--ink);
+}
+
+/* 실험대(개편): 목표 칸 · 재료 상태 */
+.exptarget {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0 10px;
+}
+.eslots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.eslot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px dashed #ffffff33;
+  background: #0e1119;
+  font-size: 13px;
+}
+.eslot.ok {
+  border: 1px solid #6fc49388;
+  background: #6fc49314;
+}
+.eslot.ok b {
+  color: var(--good);
+}
+.eslot .tile {
+  width: 26px;
+  height: 26px;
+}
+.mchip.yes {
+  border-color: #6fc49399;
+}
+.mchip.yes small {
+  color: var(--good);
+}
+.mchip.grade {
+  opacity: 0.42;
+}
+.exptgts {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.exptgts .btn.on {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.clue .row {
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+b.ok {
+  color: var(--good);
+}
+
+/* 강화 등급 상승 */
+.tierup {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--amber);
+  background: #e9b45018;
+  color: #ffe3a1;
+  font-size: 14px;
+  animation: tierGlow 1.2s ease-out;
+}
+@keyframes tierGlow {
+  from { box-shadow: 0 0 0 0 #e9b450aa; }
+  to { box-shadow: 0 0 0 14px #e9b45000; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tierup { animation: none; }
+}
+.tiernext {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* 예산이 모자랄 때 */
+.hbudget-row {
+  grid-column: 1 / -1;
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  margin-top: 4px;
+  border-radius: 8px;
+  border: 1px dashed #e9b45066;
+  background: #e9b4500d;
+}
+.hbudget-row .row {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hbudget-row small.bad {
+  color: var(--danger);
+}
+
+/* 좌판: 여러 개 사기 */
+.ware .wbuy {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }

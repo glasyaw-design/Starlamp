@@ -33,7 +33,7 @@ function openConsign() {
   const rows = S.items
     .map(it => {
       const v = itemVal(it) * (1 + 0.1 * S.up.appraise);
-      return `<div class="sellrow">${tile(it.key, it.lvl)}<div><b class="rn${ITEMS[it.key].r}">${iname(it)}</b>${elTag(itemElem(it), 1)}<div class="muted" style="font-size:12px">감정가 ${fmt(itemVal(it))}G · 예상 낙찰 ${fmt(v * 0.8)}~${fmt(v * 1.7)}G</div></div><div class="opts"><button class="btn small primary" data-act="consign" data-v="${it.id}">위탁하기</button></div></div>`;
+      return `<div class="sellrow">${tile(it.key, it.lvl)}<div><b class="rn${itemR(it)}">${iname(it)}</b>${elTag(itemElem(it), 1)}<div class="muted" style="font-size:12px">감정가 ${fmt(itemVal(it))}G · 예상 낙찰 ${fmt(v * 0.8)}~${fmt(v * 1.7)}G</div></div><div class="opts"><button class="btn small primary" data-act="consign" data-v="${it.id}">위탁하기</button></div></div>`;
     })
     .join('');
   showModal('경매장에 위탁할 물건', rows, [{ label: '닫기', act: 'close' }]);

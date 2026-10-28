@@ -64,8 +64,9 @@ function startDay(first) {
   S.heroes = [];
   S.event = null;
   S.sponsor = false;
-  if (!first && Math.random() < 0.5) {
-    const e = pick(EVENTS);
+  const ED = EVENT_DIFF[S.diff] || EVENT_DIFF.normal;
+  if (!first && S.day >= 2 && Math.random() < ED.chance) {
+    const e = pickEvent();
     S.event = e.id;
     if (e.id === 'wanderer') {
       for (let i = 0; i < 2; i++) {
@@ -74,11 +75,44 @@ function startDay(first) {
       }
     }
     if (e.id === 'raid') {
-      const l = Math.round(S.gold * 0.08 * lossMul());
+      const l = Math.round(S.gold * ED.raid * lossMul()); // 난이도별 5~13%
       pay('loss', l);
       log(l ? `마물 습격으로 ${fmt(l)}G를 잃었어요.` : '마물이 왔지만 경비견이 다 쫓아냈어요.', 'bad');
     }
     if (e.id === 'meteor') addMat('star', 1);
+    // 나쁜 소식(어려움·악몽)
+    if (e.id === 'thief') {
+      const cand = S.items.filter(x => ITEMS[x.key].r <= 3 && !x.named);
+      const it = cand.length && lossMul() > 0 ? pick(cand) : null;
+      if (it) {
+        removeItem(it);
+        log(`좀도둑이 ${j(iname(it), '을/를')} 훔쳐 갔어요.`, 'bad');
+      } else log('좀도둑이 들었지만 훔칠 만한 게 없었어요.');
+    }
+    if (e.id === 'damp') {
+      const ks = Object.keys(S.mats).filter(k => S.mats[k] > 0 && MATS[k].r <= 2);
+      const gone = [];
+      for (let i = 0; i < 2 && ks.length; i++) {
+        const k = ks.splice(Math.floor(Math.random() * ks.length), 1)[0];
+        const n = Math.min(S.mats[k], ri(1, 2));
+        useMat(k, n);
+        gone.push(`${MATS[k].n} ${n}`);
+      }
+      log(gone.length ? `창고 습기로 ${gone.join(', ')}개가 상했어요.` : '창고가 눅눅했지만 상할 재료가 없었어요.', 'bad');
+    }
+    if (e.id === 'tax') {
+      const l = Math.round(S.gold * ED.tax);
+      pay('other', l);
+      log(`왕국 특별세로 ${fmt(l)}G를 냈어요.`, 'bad');
+    }
+    if (e.id === 'gossip') {
+      S.rep = Math.max(0, S.rep - 3);
+      log('나쁜 소문이 돌아 명성 −3. 오늘은 손님이 한 명 덜 와요.', 'bad');
+    }
+    if (e.id === 'storm') {
+      S.ap = Math.max(1, S.ap - 1);
+      log('폭풍우로 길이 막혀 오늘은 행동력 −1.', 'bad');
+    }
     log(`오늘의 소식 · ${e.n}`, 'gold');
   }
   if (!first) {
@@ -148,7 +182,7 @@ function startDay(first) {
     S.world.quests.push(q);
     log(`${kname(q.kid)}에서 새 의뢰가 들어왔어요.`, 'gold');
   }
-  const n = 3 + (S.rep >= 40 ? 1 : 0) + (S.event === 'guild' ? 1 : 0) + S.up.shelf;
+  const n = Math.max(2, 3 + (S.rep >= 40 ? 1 : 0) + (S.event === 'guild' ? 1 : 0) - (S.event === 'gossip' ? 1 : 0) + S.up.shelf);
   if (S.day >= 2 && (!S.trend || S.day >= S.trend.until)) {
     const pool = Object.keys(SUB).filter(x =>
       CRAFTABLE.some(k => ITEMS[k].sub === x && S.known[k] && recipeVisible(k))
@@ -383,6 +417,7 @@ function endDay() {
         gift = m;
         log(`${j(h.name, '이/가')} 원정길에서 ${j(MATS[m].n, '을/를')} 선물로 챙겨 왔어요.`, 'good');
       }
+      if (typeof creditSettle === 'function') creditSettle(h, R, hurt); // 외상 받기
       histOnExpedition(b.hid, { dmg, crit, hurt, ok: R.ok, where: T.region });
       namedCheck(b.hid);
       r.gear = { hid: b.hid || null, name: b.name, el: b.el || null, key: b.key };

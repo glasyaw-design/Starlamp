@@ -549,6 +549,19 @@ function sanitizeState(s, report) {
   if (s.crisis && s.crisis.id === 'eclipse' && s.crisis.v && !MID_V[s.crisis.v]) s.crisis.v = 'eclipse';
   (s.items || []).forEach(it => {
     if (it.q != null && ![0, 1, 2].includes(it.q)) it.q = 0;
+    // 강화 등급 상승(RC2): 0~2 정수, 전설을 넘지 않게
+    if (it.up != null) {
+      const cap = ITEMS[it.key] ? Math.min(2, 4 - ITEMS[it.key].r) : 0;
+      it.up = Math.max(0, Math.min(cap, Math.round(+it.up) || 0));
+      if (!it.up) delete it.up;
+    }
+  });
+  // 예산 길(RC2): 손님 주머니 [재료, 개수] · 외상 금액
+  (s.heroes || []).forEach(h => {
+    if (!h || typeof h !== 'object') return;
+    if (h.pouch != null) h.pouch = Array.isArray(h.pouch) ? h.pouch.filter(x => Array.isArray(x) && MATS[x[0]] && x[1] > 0).map(([k, n]) => [k, Math.min(9, Math.round(n))]) : undefined;
+    if (h.bought && h.bought.owe != null) h.bought.owe = Math.max(0, Math.min(99999, Math.round(+h.bought.owe) || 0));
+    if (h.nope != null && (typeof h.nope !== 'object' || Array.isArray(h.nope))) h.nope = {};
   });
   if (!(s.coach === 'done' || s.coach == null || (typeof s.coach === 'number' && s.coach >= 0 && s.coach < 20))) s.coach = 'done';
   // 처음 여는 메뉴 설명: 이전 저장은 이미 열어 본 탭을 본 것으로 친다
@@ -577,6 +590,24 @@ function sanitizeState(s, report) {
   s.loans = Array.isArray(s.loans) ? s.loans.filter(l => l && typeof l.due === 'number' && l.back > 0).slice(0, 10) : [];
   s.expSel = Array.isArray(s.expSel) ? s.expSel.filter(m => MATS[m]).slice(0, 3) : [];
   s.expLog = Array.isArray(s.expLog) ? s.expLog.filter(e => e && Array.isArray(e.mats)).slice(0, 6) : [];
+  // 실험대 개편(RC2): 목표 조합식과 재료별 결과(1 들어감 · 0 아님)
+  if (s.expTgt != null && !(typeof s.expTgt === 'string' && CRAFTABLE.includes(s.expTgt))) s.expTgt = null;
+  if (s.expMark && typeof s.expMark === 'object') {
+    for (const k in s.expMark) {
+      const o = s.expMark[k];
+      if (!CRAFTABLE.includes(k) || !o || typeof o !== 'object') delete s.expMark[k];
+      else for (const m in o) if (!MATS[m] || (o[m] !== 0 && o[m] !== 1)) delete o[m];
+    }
+  } else s.expMark = {};
+  // 단서 개편(RC2): 3단계는 조합식을 깨우치는 단계 — 예전에 3단계까지 모은 단서는 그대로 깨우친다
+  for (const k in s.clues) {
+    if (s.known && s.known[k]) delete s.clues[k];
+    else if (s.clues[k] >= 3 && ITEMS[k].r >= 3) {
+      s.known = s.known || {};
+      s.known[k] = 1;
+      delete s.clues[k];
+    }
+  }
   // 화면 상태
   if (!TABS.some(([k]) => k === s.tab)) s.tab = 'shop';
   // 진행 중이던 탐색: 지역이 사라졌으면 행동력을 돌려주고 취소한다.

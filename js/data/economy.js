@@ -175,6 +175,8 @@ const DIFF = {
     risk: -0.03,
     rent: [0, 0],
     ach: 1,
+    enh: 5, // 강화 성공 확률 +5%p(RC2)
+    enhDrop: 0.8, // +4부터 실패 때 한 단계 내려갈 확률 ×0.8
     col: 'var(--good)'
   },
   normal: {
@@ -184,12 +186,14 @@ const DIFF = {
     pay: 0.8,
     cost: 1,
     target: GOAL_BASE,
-    grow: 1,
-    contrib: 1,
-    dark: 1,
-    risk: 0,
-    rent: [15, 2],
+    grow: 0.97, // RC2 난이도 상향: 1 → 0.97
+    contrib: 0.94, // 1 → 0.94
+    dark: 1.1, // 1 → 1.1
+    risk: 0.01, // 0 → 0.01
+    rent: [18, 2], // [15, 2] → [18, 2]
     ach: 0.6,
+    enh: 0, // 강화 성공 확률 +0%p(RC2)
+    enhDrop: 1, // +4부터 실패 때 한 단계 내려갈 확률 ×1
     col: 'var(--r3)'
   },
   hard: {
@@ -199,12 +203,14 @@ const DIFF = {
     pay: 0.72,
     cost: 1.15,
     target: GOAL_BASE,
-    grow: 0.92,
-    contrib: 0.96,
-    dark: 1.3,
-    risk: 0.04,
-    rent: [25, 4],
+    grow: 0.9, // RC2 난이도 상향: 0.92 → 0.9
+    contrib: 0.89, // 0.96 → 0.89
+    dark: 1.45, // 1.3 → 1.45
+    risk: 0.05, // 0.04 → 0.05
+    rent: [30, 5], // [25, 4] → [30, 5]
     ach: 0.4,
+    enh: -8, // 강화 성공 확률 -8%p(RC2)
+    enhDrop: 1.25, // +4부터 실패 때 한 단계 내려갈 확률 ×1.25
     col: 'var(--amber)'
   },
   nightmare: {
@@ -214,12 +220,14 @@ const DIFF = {
     pay: 0.6,
     cost: 1.3,
     target: GOAL_BASE,
-    grow: 0.9,
-    contrib: 0.95,
-    dark: 1.6,
-    risk: 0.08,
-    rent: [40, 6],
+    grow: 0.86, // 악몽 강화(RC2): 0.9 → 0.86
+    contrib: 0.84, // 0.95 → 0.84 — 원정 성과가 사명에 덜 들어감
+    dark: 1.85, // 1.6 → 1.85 — 어둠이 더 빨리 번짐
+    risk: 0.1, // 0.08 → 0.1
+    rent: [45, 7], // [40, 6] → [45, 7]
     ach: 0.25,
+    enh: -16, // 강화 성공 확률 -16%p(RC2)
+    enhDrop: 1.5, // +4부터 실패 때 한 단계 내려갈 확률 ×1.5
     col: 'var(--danger)'
   }
 };
@@ -240,9 +248,9 @@ const MISSION_TUNE = {
     legion: { weak: 2, off: 0.89, gen: 1.08, every: 5 }
   },
   nightmare: {
-    boss: { weak: 2.4, off: 0.9, awaken: 30 },
-    peace: { diplo: 6.5, share: 0.7, days: 3, war: 190, mediate: 250, cap0: 90, capDay: 9 },
-    legion: { weak: 2.2, off: 0.87, gen: 1.15, every: 5 }
+    boss: { weak: 2.4, off: 0.8, awaken: 34 }, // off 0.9→0.8 · awaken 30→34: 약점을 맞추지 않으면 훨씬 힘듦
+    peace: { diplo: 6, share: 0.66, days: 3, war: 210, mediate: 240, cap0: 85, capDay: 8 },
+    legion: { weak: 2.2, off: 0.8, gen: 1.22, every: 5 }
   }
 };
 // 지금 판의 사명 구조 손잡이

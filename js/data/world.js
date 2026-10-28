@@ -79,8 +79,31 @@ const EVENTS = [
   { id: 'guild', n: '모험가 길드 공고', d: '길드가 원정대를 모집 중이에요. 오늘은 용사가 한 명 더 와요.' },
   { id: 'meteor', n: '별똥별', d: '뒷마당에 별이 떨어졌어요. 별빛 조각 하나 득템!' },
   { id: 'rally', n: '왕국의 격려', d: '국왕이 원정대를 응원했어요. 오늘 밤 원정 성과 +20%.' },
-  { id: 'sale', n: '상인 조합 할인', d: '상인 조합 세일! 오늘은 좌판, 경영 물품, 조합식이 20% 싸요.' }
+  { id: 'sale', n: '상인 조합 할인', d: '상인 조합 세일! 오늘은 좌판, 경영 물품, 조합식이 20% 싸요.' },
+  // 나쁜 소식(RC2): neg = 나쁜 소식, min = 이 난이도부터 나옴
+  { id: 'thief', n: '좀도둑', d: '밤사이 좀도둑이 진열대의 물건 하나를 훔쳐 갔어요.', neg: 1, min: 'hard' },
+  { id: 'damp', n: '창고 습기', d: '장마에 창고가 눅눅해져 재료 몇 개가 상했어요.', neg: 1, min: 'hard' },
+  { id: 'tax', n: '왕국 특별세', d: '전쟁 자금을 모은다며 왕국이 특별세를 걷어 갔어요.', neg: 1, min: 'hard' },
+  { id: 'gossip', n: '나쁜 소문', d: '까마귀 상회가 퍼뜨린 헛소문 탓에 명성이 떨어지고 손님이 한 명 덜 와요.', neg: 1, min: 'nightmare' },
+  { id: 'storm', n: '폭풍우', d: '거센 폭풍우로 길이 막혀 오늘은 행동력이 1 줄었어요.', neg: 1, min: 'nightmare' }
 ];
+// 난이도별 아침 소식: chance 소식이 있을 확률 · neg 그중 나쁜 소식 비율 · raid 마물 습격 손실 · tax 특별세 · thief 좀도둑이 고르는 범위
+const EVENT_DIFF = {
+  easy: { chance: 0.5, neg: 0.1, raid: 0.05, tax: 0.03 },
+  normal: { chance: 0.5, neg: 0.18, raid: 0.08, tax: 0.04 },
+  hard: { chance: 0.55, neg: 0.4, raid: 0.1, tax: 0.06 },
+  nightmare: { chance: 0.62, neg: 0.55, raid: 0.13, tax: 0.08 }
+};
+const DIFF_ORDER = ['easy', 'normal', 'hard', 'nightmare'];
+// 오늘 나올 수 있는 소식(난이도에 따라 나쁜 소식이 늘어남)
+function pickEvent() {
+  const ED = EVENT_DIFF[S.diff] || EVENT_DIFF.normal;
+  const lv = DIFF_ORDER.indexOf(S.diff || 'normal');
+  const ok = e => !e.min || DIFF_ORDER.indexOf(e.min) <= lv;
+  const bad = EVENTS.filter(e => (e.neg || e.id === 'raid') && ok(e));
+  const good = EVENTS.filter(e => !e.neg && e.id !== 'raid');
+  return Math.random() < ED.neg ? pick(bad) : pick(good);
+}
 // 사명별 목표치 보정. 2.0 균형 점검에서 세계 평화가 가장 어려워 0.95 → 0.85로 낮췄어요.
 const GOAL_K = { boss: 1, legion: 1.15, peace: 0.85 };
 const GOAL_RULE = {
