@@ -1,0 +1,77 @@
+/* Readability upgrade: overrides only; original mechanics and pixel art intact. */
+:root { --muted:#c2c6d2; --line:#4c556c; --ink:#fff0d7; --panel:#202636; --panel-2:#2b3345; }
+body { font-size:16px; line-height:1.65; }
+.wrap {max-width:1520px; padding-inline:clamp(12px,2vw,28px); gap:16px;}
+.layout {grid-template-columns:minmax(0,1fr) minmax(300px,350px);gap:20px;}
+.top {gap:12px 20px;}
+.sign p,.sec .lead {color:var(--muted);font-size:15px;}
+.sec {padding:clamp(14px,1.5vw,22px);border-color:var(--line);box-shadow:0 4px 18px #0002;}
+.sec h2 {font-size:21px;}
+.tabs {position:sticky;top:0;z-index:35;background:#151a27; padding:6px;border:1px solid var(--line);border-radius:12px;gap:6px;scrollbar-width:thin;}
+.tab {padding:12px 16px;border:1px solid transparent;border-radius:9px;font-size:17px;min-height:46px;}
+.tab:hover {color:var(--ink);background:#30394d;}
+.tab.on {background:#483b25;color:#ffe2a0;border-color:#bd8a3f;box-shadow:inset 0 0 0 1px #e9b45044;}
+.btn {padding:10px 14px;border-color:#667085;min-height:42px;font-size:15px;}
+.btn.small {font-size:14px;padding:7px 11px;min-height:36px;}
+.btn:hover:not(:disabled){background:#374257;}
+.btn.primary:hover:not(:disabled){background:#f6cc7c;}
+.btn:disabled {opacity:.58;}
+.chip {font-size:15px;border-color:var(--line);padding:7px 13px;}
+.chip small {font-size:13px;color:var(--muted);}
+.goalhead {font-size:15px;}
+.mat,.invrow {font-size:14px;min-height:42px;padding:6px 9px;gap:9px;}
+.mat {border:1px solid #424b60;}
+.invrow {border-color:#424b60;}
+.invrow:hover {background:#364058;border-color:var(--amber);}
+.mats {grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px;max-height:365px;}
+.inv {gap:7px;max-height:430px;}
+.invrow small,.bag {font-size:13px;}
+.log {max-height:340px;}
+.muted {color:var(--muted);}
+button:focus-visible, a:focus-visible, input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible {outline:3px solid #ffd07a;outline-offset:3px;}
+/* Catch small labels across dynamically rendered game screens. */
+#app small, #modal small {font-size:max(.875em,13px);}
+#app input,#app select,#app textarea,#modal input,#modal select,#modal textarea {font-size:16px;min-height:38px;}
+#app button,#modal button {letter-spacing:0;}
+#app button:not(.tab),#modal button {overflow-wrap:anywhere;}
+#app .lead,#modal .muted {line-height:1.7;}
+/* User-controlled whole-interface scaling while preserving pixel canvas art. */
+html[data-ui-scale="large"] {font-size:18px;}
+html[data-ui-scale="large"] body {font-size:18px;}
+html[data-ui-scale="large"] #app :is(.mat,.invrow,.chip,.goalhead,.sec .lead,.sign p,.btn,.bag),
+html[data-ui-scale="large"] #modal :is(.btn,.muted) {font-size:17px;}
+html[data-ui-scale="large"] #app small,html[data-ui-scale="large"] #modal small {font-size:15px;}
+html[data-ui-scale="large"] .tab {font-size:20px;}
+html[data-ui-scale="large"] .sec h2 {font-size:23px;}
+html[data-ui-scale="large"] .layout {grid-template-columns:minmax(0,1fr) minmax(350px,400px);}
+html[data-ui-scale="large"] .wrap {max-width:1640px;}
+html[data-ui-scale="large"] .btn {min-height:44px;}
+/* Stronger secondary contrast on demand. */
+html[data-ui-contrast="high"] {--muted:#ebebf2;--line:#8490a7;--ink:#ffffff;--panel:#242d40;--panel-2:#344157;}
+html[data-ui-contrast="high"] .mat,html[data-ui-contrast="high"] .invrow {border-color:#74819b;}
+.ui-access {display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+.ui-access .ui-label {color:var(--muted);font-size:13px;}
+.ui-access button {min-width:52px;}
+.ui-access button[aria-pressed="true"] {background:#594729;color:#ffe3a0;border-color:#f2c06f;}
+@media (max-width:1100px) {.layout {grid-template-columns:minmax(0,1fr) 290px;gap:12px;} html[data-ui-scale="large"] .layout {grid-template-columns:minmax(0,1fr) 310px;} .mats {grid-template-columns:1fr;}}
+@media (max-width:900px) {.layout,html[data-ui-scale="large"] .layout {grid-template-columns:minmax(0,1fr);} .mats {grid-template-columns:repeat(auto-fill,minmax(145px,1fr));} .top {grid-template-columns:1fr;} .stats {justify-content:flex-start;} .tabs {top:0;} .ui-access {justify-content:flex-start;}}
+@media (max-width:640px) {.wrap {padding-inline:10px;gap:11px;} .sec {padding:13px;} .tabs {gap:3px;padding:4px;} .tab {min-height:43px;padding:9px 12px;font-size:15px;} .layout {gap:12px;} .btn {white-space:normal;} .sign h1 {white-space:normal;} .ui-access .ui-label {display:none;} .mats {grid-template-columns:repeat(2,minmax(0,1fr));} .mat {min-width:0;} .stats {gap:6px;} .chip {padding:5px 9px;} html[data-ui-scale="large"] .tab {font-size:17px;} }
+@media (prefers-reduced-motion:reduce) {*,*::before,*::after {scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+
+/* 2.1 · Focused workspace. Game systems and save data are untouched. */
+.wrap{max-width:1660px}
+.layout{grid-template-columns:minmax(0,1fr) minmax(275px,315px);gap:18px;transition:grid-template-columns .2s ease}
+.layout.sidebar-collapsed{grid-template-columns:minmax(0,1fr)}
+.layout.sidebar-collapsed #shopSidebar{display:none}
+#panel>.sec{min-width:0}
+.workspace-toolbar{display:flex;justify-content:flex-end;align-items:center;gap:12px;margin:0 0 10px;color:var(--muted);font-size:13px}
+.workspace-toolbar .btn{min-height:40px}
+#shopSidebar .sec{box-shadow:0 2px 12px #0002}
+#shopSidebar .mat,#shopSidebar .invrow{min-height:44px}
+#shopSidebar .muted{color:#c2c4cd}
+.tabs{position:sticky;top:0;z-index:30;background:var(--bg,#151824);padding:9px 0;box-shadow:0 5px 15px #0003}
+.tab{min-height:43px}
+button:focus-visible{outline:3px solid #f4c875!important;outline-offset:3px}
+@media(max-width:1100px){.layout{grid-template-columns:minmax(0,1fr)}#shopSidebar{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.layout.sidebar-collapsed #shopSidebar{display:none}}
+@media(max-width:660px){.workspace-toolbar{justify-content:space-between}#shopSidebar{grid-template-columns:minmax(0,1fr)}.tabs{top:0}}
+@media(prefers-reduced-motion:reduce){.layout{transition:none}}

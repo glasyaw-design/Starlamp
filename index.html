@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>별빛 등불 마법상점</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/readability.css" />
+    <link rel="stylesheet" href="css/workbench.css" />
+    <link rel="stylesheet" href="css/fun.css" />
+  </head>
+  <body>
+    <div id="title" class="title">
+      <div class="tbox">
+        <div class="tscene">
+          <canvas
+            id="tcanvas"
+            width="192"
+            height="128"
+            aria-label="밤의 마법상점 앞, 용사 둘과 고양이가 서 있다."
+          ></canvas>
+          <div class="logo">
+            <small>별빛 등불</small><b>마법상점</b><em>STARLAMP MAGIC SHOP</em>
+          </div>
+        </div>
+        <div class="tload" id="tload">
+          <div class="spread">
+            <span id="tstep">준비하는 중</span
+            ><span id="tpct" class="num">0%</span>
+          </div>
+          <div class="tbar"><i id="tfill"></i></div>
+          <p id="ttip"></p>
+        </div>
+        <div class="tstart" id="tstart" hidden></div>
+      </div>
+    </div>
+    <div class="wrap" id="app" hidden>
+      <div id="saveWarn" class="savewarn" role="alert" hidden></div>
+      <header class="top">
+        <div class="sign">
+          <div class="lamp" aria-hidden="true"></div>
+          <div>
+            <h1>별빛 등불 마법상점</h1>
+            <p id="goalDesc"></p>
+          </div>
+        </div>
+        <div class="stats" id="stats"></div>
+        <div class="goalbox" id="goalbox"></div>
+      </header>
+      <div class="workspace-toolbar"><span>작업 화면</span><button type="button" class="btn small" id="sideToggle" aria-controls="shopSidebar" aria-expanded="true">창고 접기 · 화면 넓게</button></div>
+      <nav class="tabs" id="tabs"></nav>
+      <div class="layout">
+        <main id="panel"></main>
+        <aside id="shopSidebar" aria-label="창고 및 상점 일지">
+          <section class="sec">
+            <div class="spread">
+              <h2>재료 창고</h2>
+              <span class="muted num" id="matCount"></span>
+            </div>
+            <div class="mats" id="mats"></div>
+          </section>
+          <section class="sec">
+            <div class="spread">
+              <h2>진열 물품</h2>
+              <span class="muted num" id="invCount"></span>
+            </div>
+            <div class="bag" id="bag"></div>
+            <div class="inv" id="inv"></div>
+          </section>
+          <section class="sec">
+            <h2>상점 일지</h2>
+            <div class="log" id="log"></div>
+          </section>
+        </aside>
+      </div>
+      <div class="foot">
+        <span id="saveStatus">진행은 이 브라우저에 자동 저장돼요.</span><span class="row" style="gap:6px"><button class="btn small" data-act="journal">이야기 수첩</button><button class="btn small" data-act="tutOpen">튜토리얼</button><button class="btn small" data-act="saveMenu">저장 · 불러오기</button><button class="btn small" data-act="askNew">새 게임 시작</button><button class="btn small" data-act="about" id="verBtn">정보 · 오류 제보</button><span id="cloudChip"></span></span>
+      </div>
+    </div>
+    <div id="toasts" aria-live="polite"></div>
+    <input type="file" id="importFile" accept=".json,application/json,text/plain" hidden />
+    <div class="modal" id="modal" hidden>
+      <div class="mbox">
+        <header><h2 id="mTitle"></h2></header>
+        <div class="mbody" id="mBody"></div>
+        <div class="mfoot" id="mFoot"></div>
+      </div>
+    </div>
+
+    <!-- 불러오는 순서가 중요해요: 도우미 → 데이터 → 게임 로직 → 그래픽·사운드 → 화면 → 시작 -->
+    <script src="js/engine/util.js"></script>
+    <script src="js/engine/store.js"></script>
+    <script src="js/data/materials.js"></script>
+    <script src="js/data/items.js"></script>
+    <script src="js/data/regions.js"></script>
+    <script src="js/data/world.js"></script>
+    <script src="js/data/heroes.js"></script>
+    <script src="js/data/economy.js"></script>
+    <script src="js/data/market.js"></script>
+    <script src="js/data/elements.js"></script>
+    <script src="js/data/hero-quests.js"></script>
+    <script src="js/data/expeditions.js"></script>
+    <script src="js/data/fun.js"></script>
+    <script src="js/data/cloud-config.js"></script>
+    <script src="js/data/explore-events.js"></script>
+    <script src="js/data/progress.js"></script>
+    <script src="js/game/state.js"></script>
+    <script src="js/game/save-manager.js"></script>
+    <script src="js/game/flow.js"></script>
+    <script src="js/game/day-summary.js"></script>
+    <script src="js/game/economy.js"></script>
+    <script src="js/game/crafting-effects.js"></script>
+    <script src="js/game/item-history.js"></script>
+    <script src="js/game/hero-relations.js"></script>
+    <script src="js/game/expeditions.js"></script>
+    <script src="js/game/haggle.js"></script>
+    <script src="js/game/rival.js"></script>
+    <script src="js/game/cards.js"></script>
+    <script src="js/game/experiment.js"></script>
+    <script src="js/game/legacy.js"></script>
+    <script src="js/game/save-slots.js"></script>
+    <script src="js/game/cloud.js"></script>
+    <script src="js/game/opening.js"></script>
+    <script src="js/game/crisis.js"></script>
+    <script src="js/game/stats.js"></script>
+    <script src="js/game/thrill.js"></script>
+    <script src="js/game/ai.js"></script>
+    <script src="js/game/quality.js"></script>
+    <script src="js/game/depth.js"></script>
+    <script src="js/game/talk.js"></script>
+    <script src="js/game/mastery.js"></script>
+    <script src="js/game/kingdom-ev.js"></script>
+    <script src="js/game/missions.js"></script>
+    <script src="js/game/world.js"></script>
+    <script src="js/game/day.js"></script>
+    <script src="js/game/shop.js"></script>
+    <script src="js/game/explore.js"></script>
+    <script src="js/game/blackmarket.js"></script>
+    <script src="js/engine/pixel.js"></script>
+    <script src="js/engine/audio.js"></script>
+    <script src="js/ui/modal.js"></script>
+    <script src="js/ui/guide.js"></script>
+    <script src="js/ui/views.js"></script>
+    <script src="js/ui/views-map.js"></script>
+    <script src="js/ui/views-save.js"></script>
+    <script src="js/ui/views-day.js"></script>
+    <script src="js/ui/views-craft.js"></script>
+    <script src="js/ui/views-heroes.js"></script>
+    <script src="js/ui/views-fun.js"></script>
+    <script src="js/ui/foes.js"></script>
+    <script src="js/ui/expedition-scene.js"></script>
+    <script src="js/ui/juice.js"></script>
+    <script src="js/ui/input.js"></script>
+    <script src="js/ui/tutorial.js"></script>
+    <script src="js/ui/story.js"></script>
+    <script src="js/ui/story-beats.js"></script>
+    <script src="js/ui/thrill-ui.js"></script>
+    <script src="js/ui/stats-ui.js"></script>
+    <script src="js/ui/save-ui.js"></script>
+    <script src="js/ui/coach.js"></script>
+    <script src="js/ui/easy.js"></script>
+    <script src="js/ui/depth-ui.js"></script>
+    <script src="js/ui/gear-info.js"></script>
+    <script src="js/ui/tips.js"></script>
+    <script src="js/ui/about.js"></script>
+    <script src="js/ui/cloud-ui.js"></script>
+    <script src="js/ui/craft-anim.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/ui/readability.js"></script>
+    <script src="js/ui/workspace.js"></script>
+  </body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "starlamp-magic-shop",
+  "private": true,
+  "description": "별빛 등불 마법상점 — 게임 + 계정 API(Vercel)",
+  "type": "module",
+  "optionalDependencies": {
+    "redis": "^4.7.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
