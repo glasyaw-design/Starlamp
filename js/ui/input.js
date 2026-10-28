@@ -186,6 +186,7 @@ const ACT = {
       [{ label: '계속하기', act: 'close' }]
     ),
   newGameDiff: v => {
+    if (!DIFF[v] || DIFF[v].hidden) v = 'normal'; // 숨긴 난이도로는 새로 시작하지 않음
     closeModal();
     newGame(v);
     commit();
@@ -199,7 +200,7 @@ const ACT = {
   // 엔딩 창의 '새 게임 시작': 난이도를 다시 고르게 한다(지난 판 난이도가 기본)
   newGame: () => {
     if (S && S.over) {
-      const d = S.diff;
+      const d = DIFF[S.diff] && !DIFF[S.diff].hidden ? S.diff : 'normal';
       return showModal('새 게임 · 난이도 고르기', `<p>새로운 세계와 사명이 정해져요. 별빛 유산은 그대로 남아요.</p>${diffPicker('newGameDiff')}`, [{ label: `${(DIFF[d] || DIFF.normal).n}(으)로 바로 시작`.replace('(으)로', j((DIFF[d] || DIFF.normal).n, '으로').slice((DIFF[d] || DIFF.normal).n.length)), act: 'newGameDiff', data: d, primary: 1 }]);
     }
     closeModal();

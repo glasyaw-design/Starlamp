@@ -132,6 +132,10 @@ async function bootTitle() {
   $('#tload').style.opacity = 0;
   await sleep(350);
   $('#tload').hidden = true;
+  renderTitleStart();
+}
+// 타이틀의 시작 버튼들(처음 켤 때 · 게임 중 '타이틀로' 돌아왔을 때 함께 씀)
+function renderTitleStart() {
   const st = $('#tstart');
   const L = SAVE.lastLoad;
   const warn =
@@ -146,12 +150,14 @@ async function bootTitle() {
     '<button class="btn small" data-act="saveMenu">불러오기 · 다른 기기에서 이어하기</button>' +
     (legacyLoad().runs ? `<button class="btn small" data-act="openLegacy">★ 별빛 유산 (${legacyLoad().stars})</button>` : '') +
     '<div id="cloudTitle"></div>' +
-    `<button class="linkbtn tver" data-act="about">${RELEASE} · 게임 정보 · 오류 제보</button>`;
+    `${typeof changelogBadge === 'function' && changelogBadge() ? '<button class="btn small tnew" data-act="changelog">✨ 새 업데이트 · 바뀐 점 보기</button>' : ''}<button class="linkbtn tver" data-act="about">${RELEASE} · 게임 정보 · 오류 제보</button>`;
   st.hidden = false;
   if (typeof cloudPaint === 'function') cloudPaint();
 }
 function diffPicker(act) {
+  // 숨긴 난이도(느긋하게)는 고를 수 없다 — 예전 저장은 그대로 이어서 할 수 있음
   return `<div class="exchoice" style="width:min(420px,100%)">${Object.entries(DIFF)
+    .filter(([, d]) => !d.hidden)
     .map(
       ([k, d]) =>
         `<button class="btn${k === 'normal' ? ' on' : ''}" data-act="${act}" data-v="${k}"><b style="color:${d.col}">${d.n}</b><small>${d.d}</small></button>`
@@ -161,6 +167,7 @@ function diffPicker(act) {
 function startGame(mode, diff) {
   startAudio();
   if (mode === 'new') {
+    if (!DIFF[diff] || DIFF[diff].hidden) diff = 'normal';
     newGame(diff);
   }
   const app = $('#app');
@@ -184,6 +191,23 @@ function startGame(mode, diff) {
     if (mode === 'new') storyThenMission();
     else if (S.exRun) exResume();
   }, 700);
+}
+// 게임 중 타이틀로 돌아가기: 진행은 자동 저장되어 있고, '이어하기'로 바로 돌아온다.
+function goTitle() {
+  if (TITLE_ON || !S) return;
+  if (typeof MODAL_LOCK !== 'undefined' && MODAL_LOCK) return; // 장면·연출 중에는 막음
+  closeModal();
+  commit();
+  HAS_SAVE = true;
+  TITLE_ON = true;
+  const t = $('#title');
+  t.hidden = false;
+  t.classList.remove('out');
+  $('#tload').hidden = true;
+  renderTitleStart();
+  titleAnim();
+  $('#app').hidden = true;
+  scrollTo(0, 0);
 }
 // 저장 불러오기: 마이그레이션과 정리는 save-manager.js 가 맡는다.
 function bootLoad() {

@@ -16,7 +16,7 @@ function renderTop() {
     `<span class="chip"><small>난이도</small><b style="color:${D().col}">${D().n}</b></span><span class="chip term" data-act="term" data-v="day" title="날짜란?"><small>날짜</small><b>${S.day}</b><span class="muted">/ ${S.maxDay}일</span></span>
     <span class="chip term" data-act="term" data-v="gold" title="금화란?"><small>금화</small><b>${fmt(S.gold)}G</b></span><span class="chip term" data-act="term" data-v="rep" title="명성이란?"><small>명성</small><b>${S.rep}</b></span>${meChip()}${S.unl && S.unl.manage ? `<span class="chip"><small>연구</small><b>${S.rp}</b></span>` : ''}
     <span class="chip ap term" data-act="term" data-v="ap" title="행동력이란?"><small>행동력</small>${Array.from({ length: maxAp() }, (_, i) => `<i class="${i < S.ap ? '' : 'off'}"></i>`).join('')}</span>
-    <button class="chip cbtn${AU.on ? ' on' : ''}" data-act="sound" aria-pressed="${AU.on}">♪ ${AU.on ? '소리 켬' : '소리 끔'}</button><button class="chip cbtn${document.body.classList.contains('help-on') ? ' on' : ''}" data-act="help" aria-label="도움말 보기">? 도움말</button>
+    <button class="chip cbtn${AU.on ? ' on' : ''}" data-act="sound" aria-pressed="${AU.on}">♪ ${AU.on ? '소리 켬' : '소리 끔'}</button><button class="chip cbtn${document.body.classList.contains('help-on') ? ' on' : ''}" data-act="help" aria-label="도움말 보기">? 도움말</button><button class="chip cbtn" data-act="menu" aria-label="메뉴 열기">☰ 메뉴</button>
     <button class="btn primary" data-act="endDay" ${S.over ? 'disabled' : ''}>하루 마감</button>`;
   const pct = (S.goal.prog / g.target) * 100;
   let ticks = '';

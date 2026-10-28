@@ -10,14 +10,21 @@ function dropList(r) {
       const t = sh >= 0.3 ? ['자주', 'often'] : sh >= 0.12 ? ['가끔', 'some'] : ['드물게', 'rare'];
       return `<div class="dl">${S.seen[k] ? tile(k) : '<span class="tile unk">?</span>'}<span${S.seen[k] ? '' : ' class="muted"'}>${S.seen[k] ? MATS[k].n : '???'}</span><em class="${t[1]}">${t[0]}</em></div>`;
     })
-    .join('')}${regionBonus(r) ? `<div class="dl bonus"><span class="tile unk">+</span><span>흔한 재료 꾸러미</span><em class="often">덤 ${regionBonus(r)}개</em></div>` : ''}</div>`;
+    .join('')}${bundleN(r) ? `<div class="dl bonus"><span class="tile unk">+</span><span>흔한 재료 꾸러미</span><em class="often">${bundleSwap() ? `수확 중 ${bundleN(r)}개` : `덤 ${bundleN(r)}개`}</em></div>` : ''}</div>`;
 }
 // 높은 던전에 가는 이유: 깊은 곳일수록 '흔한 재료 꾸러미'를 덤으로 챙겨 온다(창고에 적은 흔한 재료부터).
 // 그래서 낮은 재료가 모자라도 낮은 던전만 돌 필요가 없다.
 const COMMON_MATS = Object.keys(MATS).filter(k => MATS[k].r === 1);
-const regionBonus = r => Math.min(5, Math.floor(REGIONS.indexOf(r) / 3) + (r.ap - 1));
-function commonBundle(r) {
-  const n = regionBonus(r);
+// RC2 조정: 처음엔 최대 5개였는데 경제가 너무 쉬워져서(악몽 승률 급등) 깊은 곳에서만 1~2개
+const regionBonus = r => Math.min(2, Math.floor(REGIONS.indexOf(r) / 5));
+// 꾸러미 크기: 흔한 재료가 경제의 병목이라 아주 민감하다.
+//  느긋하게는 덤으로 더 주고, 그 밖의 난이도는 수확 일부를 흔한 재료로 '바꿔' 준다(총량은 그대로).
+//  난이도별: 느긋하게 덤 전부 · 보통부터는 꾸러미 없음(재료가 귀함)
+const BUNDLE_MAX = { easy: 2, normal: 0, hard: 0, nightmare: 0 };
+const bundleN = r => Math.min(regionBonus(r), BUNDLE_MAX[S.diff] != null ? BUNDLE_MAX[S.diff] : 1);
+const bundleSwap = () => S.diff !== 'easy';
+function commonBundle(r, cap = 99) {
+  const n = Math.min(cap, bundleN(r));
   const got = {};
   for (let i = 0; i < n; i++) {
     const low = [...COMMON_MATS].sort((a, b) => (S.mats[a] || 0) + (got[a] || 0) - ((S.mats[b] || 0) + (got[b] || 0))).slice(0, 3);
@@ -297,13 +304,14 @@ function exFinish() {
   }
   if (Math.random() < myStat('vit') * STAT_FX.vit.loot) n++;
   meXp(8);
-  for (let i = 0; i < n; i++) {
+  const swap = bundleSwap() && n > 1 ? Math.min(n - 1, bundleN(r)) : 0; // 수확 일부를 흔한 재료로
+  for (let i = 0; i < n - swap; i++) {
     const k = wpick(r.drops);
     found[k] = (found[k] || 0) + 1;
   }
   if (x.cr >= 50) found.shadow = (found.shadow || 0) + 1;
   // 깊은 던전의 덤: 흔한 재료 꾸러미(창고에 적은 것부터)
-  const bundle = n > 0 ? commonBundle(r) : {};
+  const bundle = n > 0 ? commonBundle(r, bundleSwap() ? swap : 99) : {};
   for (const [k, c] of Object.entries(bundle)) found[k] = (found[k] || 0) + c;
   for (const [k, c] of Object.entries(x.extra)) found[k] = (found[k] || 0) + c;
   for (const [k, c] of Object.entries(found)) addMat(k, c);

@@ -163,6 +163,7 @@ const GOODS = [
 const GOAL_BASE = 6000;
 const DIFF = {
   easy: {
+    hidden: true, // RC2: 너무 쉬워서(전략 봇 100% · 평균 16일) 선택지에서 뺌. 예전 저장 호환용으로 남김
     n: '느긋하게',
     d: '처음 해 보는 사장님께. 손님 지갑이 두둑하고 유지비가 없어요.',
     gold: 600,
@@ -183,16 +184,16 @@ const DIFF = {
     n: '보통',
     d: '적당히 빠듯한 장사. 밤마다 가게 유지비가 나가요.',
     gold: 400,
-    pay: 0.8,
+    pay: 0.63,
     cost: 1,
     target: GOAL_BASE,
-    grow: 0.97, // RC2 난이도 상향: 1 → 0.97
-    contrib: 0.94, // 1 → 0.94
-    dark: 1.1, // 1 → 1.1
+    grow: 0.93, // RC2 난이도 상향: 1 → 0.97
+    contrib: 0.72, // 1 → 0.94
+    dark: 1.4, // 1 → 1.1
     risk: 0.01, // 0 → 0.01
-    rent: [18, 2], // [15, 2] → [18, 2]
+    rent: [25, 3], // RC2: [15, 2] → [25, 3]
     ach: 0.6,
-    enh: 0, // 강화 성공 확률 +0%p(RC2)
+    enh: -4, // 강화 성공 확률 -4%p(RC2)
     enhDrop: 1, // +4부터 실패 때 한 단계 내려갈 확률 ×1
     col: 'var(--r3)'
   },
@@ -200,12 +201,12 @@ const DIFF = {
     n: '어려움',
     d: '손님은 짜고 유지비는 비싸요. 어둠도 더 빨리 번져요.',
     gold: 250,
-    pay: 0.72,
+    pay: 0.6,
     cost: 1.15,
     target: GOAL_BASE,
     grow: 0.9, // RC2 난이도 상향: 0.92 → 0.9
-    contrib: 0.89, // 0.96 → 0.89
-    dark: 1.45, // 1.3 → 1.45
+    contrib: 0.68, // 0.96 → 0.89
+    dark: 1.6, // 1.3 → 1.45
     risk: 0.05, // 0.04 → 0.05
     rent: [30, 5], // [25, 4] → [30, 5]
     ach: 0.4,
@@ -217,12 +218,12 @@ const DIFF = {
     n: '악몽',
     d: '한 푼이 아쉬운 세계. 실수 한 번이 치명적이에요.',
     gold: 150,
-    pay: 0.6,
+    pay: 0.52,
     cost: 1.3,
     target: GOAL_BASE,
     grow: 0.86, // 악몽 강화(RC2): 0.9 → 0.86
-    contrib: 0.84, // 0.95 → 0.84 — 원정 성과가 사명에 덜 들어감
-    dark: 1.85, // 1.6 → 1.85 — 어둠이 더 빨리 번짐
+    contrib: 0.62, // 0.95 → 0.84 — 원정 성과가 사명에 덜 들어감
+    dark: 2.0, // 1.6 → 1.85 — 어둠이 더 빨리 번짐
     risk: 0.1, // 0.08 → 0.1
     rent: [45, 7], // [40, 6] → [45, 7]
     ach: 0.25,
@@ -239,12 +240,12 @@ const MISSION_TUNE = {
   },
   normal: {
     boss: { weak: 2, off: 0.9, awaken: 20 },
-    peace: { diplo: 6, share: 0.8, days: 4, war: 120, mediate: 265, cap0: 110, capDay: 11 },
+    peace: { diplo: 4.6, share: 0.69, days: 4, war: 145, mediate: 252, cap0: 98, capDay: 10 }, // RC2: 평화만 조임(보통 7/10 → 목표 3~4/10)
     legion: { weak: 1.8, off: 0.88, gen: 1.1, every: 5 }
   },
   hard: {
     boss: { weak: 2.2, off: 0.85, awaken: 25 },
-    peace: { diplo: 6, share: 0.75, days: 4, war: 140, mediate: 260, cap0: 100, capDay: 10 },
+    peace: { diplo: 5.2, share: 0.68, days: 4, war: 160, mediate: 250, cap0: 92, capDay: 9 }, // RC2: 평화만 조임
     legion: { weak: 2, off: 0.89, gen: 1.08, every: 5 }
   },
   nightmare: {

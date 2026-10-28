@@ -2863,3 +2863,57 @@ b.ok {
   flex-wrap: wrap;
   justify-content: flex-end;
 }
+
+/* 업데이트 내역 */
+.clog section {
+  margin-bottom: 14px;
+}
+.clog h4 {
+  margin: 0 0 6px;
+}
+.clog .clt {
+  margin: 8px 0 4px;
+  font-weight: 700;
+  color: var(--amber);
+  font-size: 14px;
+}
+.clog ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.tnew {
+  display: block;
+  margin: 0 auto 8px;
+  border-color: var(--amber);
+  color: #ffe3a1;
+}
+
+/* 메뉴 */
+.gmenu {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+.gmenu .gmi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px;
+  text-align: left;
+  min-height: 72px;
+}
+.gmenu .gic {
+  font-size: 20px;
+}
+.gmenu small {
+  opacity: 0.75;
+  font-size: 12px;
+}
+@media (max-width: 420px) {
+  .gmenu {
+    grid-template-columns: 1fr 1fr;
+  }
+}
